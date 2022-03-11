@@ -10,3 +10,4 @@ venv.bak/
 
 # Libraries
 .idea/
+wandb/
