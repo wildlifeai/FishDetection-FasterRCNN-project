@@ -1,2 +1,2 @@
 # wildai-fish-detection-project
-This repository made for fish detection with faster-RCNN to wildAI organization.
+This is a university project for detecting fish for the wildlife.ai organization.
