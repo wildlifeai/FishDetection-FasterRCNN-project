@@ -1,10 +1,10 @@
 import argparse
-from train import FishDetectionModel
+from fish_detection_model import FishDetectionModel
 
 LEARNING_RATE = 0.001
 EPOCHS = 30
 BATCH_SIZE = 64
-MOMENTOM = 0.0435
+MOMENTUM = 0.0435
 WEIGHT_DECAY = 0.00149779494703967
 GAMMA = 0.4477536224970189
 LEARNING_RATE_SIZE = 4
@@ -45,21 +45,21 @@ def main():
         "-m",
         "--momentum",
         type=float,
-        default=MOMENTOM,
+        default=MOMENTUM,
         help="momentum of the optimizer")
 
     parser.add_argument(
         "-w",
         "--weight_decay",
         type=float,
-        default=MOMENTOM,
+        default=WEIGHT_DECAY,
         help="weight decay of the optimizer")
 
     parser.add_argument(
         "-g",
         "--gamma",
         type=float,
-        default=MOMENTOM,
+        default=GAMMA,
         help="weight decay of the optimizer")
 
     parser.add_argument(
