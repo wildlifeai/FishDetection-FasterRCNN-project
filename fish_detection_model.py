@@ -5,6 +5,8 @@ import torch
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from tqdm import tqdm
 
+from SpyFishAotearoaDataset import SpyFishAotearoaDataset
+
 
 class FishDetectionModel:
     def __init__(self, args):
@@ -41,7 +43,7 @@ class FishDetectionModel:
         return model
 
     def train(self):
-        # todo: saving the image and the box in w&b
+        # todo: saving the image and the box in w&b?
         # todo: understand the flow of retrieving the data
         print(self.args)
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -50,6 +52,13 @@ class FishDetectionModel:
             self.model = self.build_model()
 
         #todo: create a data loader for validation and training
+
+        # Creating data loader
+        dataset = SpyFishAotearoaDataset(self.args.root_path)
+
+        data_loader = torch.utils.data.DataLoader(
+            dataset, batch_size=self.args.batch_size, shuffle=True)
+
 
         self.model.to(device)
         verbose = True
@@ -62,9 +71,9 @@ class FishDetectionModel:
         with wandb.init(config=vars(self.args)):
             for epoch in range(self.args.epochs):
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
-                avg_train_loss = self.train_one_epoch(optimizer, None, device, verbose)
+                avg_train_loss = self.train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
-                avg_loss = self.evaluate(None, device)
+                avg_loss = self.evaluate(data_loader, device)
 
                 if verbose:
                     print(f'Losses of epoch num {epoch} are:')
@@ -102,7 +111,7 @@ class FishDetectionModel:
         return avg_train_loss / len(data_loader.dataset)
 
     def evaluate(self, val_set, device, verbose=True):
-        # todo: check about transfer to CPU
+        # todo: check about to.device(CPU)
         self.model.eval()
 
         avg_loss = 0

@@ -90,6 +90,14 @@ def main():
         default=f"./output/faster-rcnn-model-{time.time()}",
         help="Define an output path for the model")
 
+    parser.add_argument(
+        "-rp",
+        "--root_path",
+        type=str,
+        default='./first_image/',
+        help="A path to the images folder"
+    )
+
     args = parser.parse_args()
     model = FishDetectionModel(args)
     model.train()
