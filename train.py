@@ -81,7 +81,7 @@ def main():
         "--model_type",
         type=object,
         default=None,
-        help="Load the model from a path")
+        help="Load different model type")
 
     parser.add_argument(
         "-o",

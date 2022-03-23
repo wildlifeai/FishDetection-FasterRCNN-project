@@ -20,9 +20,6 @@ class FishDetectionModel:
             # self.model = load.model...
             pass
 
-        if args.model_type:
-            # Choose to use a different model than the default
-            self.model = args.model_type
         self.args = args
 
     def build_model(self, num_classes=2, pretrained=True):
@@ -32,9 +29,14 @@ class FishDetectionModel:
         :param num_classes: The number of classes to predict
         :return: faster-rcnn model
         """
-        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained)
-        in_features = model.roi_heads.box_predictor.cls_score.in_features
-        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+        if self.args.model_type:
+            # Choose to use a different model than the default
+            model = self.args.model_type(pretrained=pretrained)
+        else:
+            # Using default.
+            model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained)
+            in_features = model.roi_heads.box_predictor.cls_score.in_features
+            model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
         return model
 
