@@ -77,6 +77,13 @@ def main():
         help="Load the model from a path")
 
     parser.add_argument(
+        "-mt",
+        "--model_type",
+        type=object,
+        default=None,
+        help="Load the model from a path")
+
+    parser.add_argument(
         "-o",
         "--output_path",
         type=str,

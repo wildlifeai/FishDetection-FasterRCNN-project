@@ -20,6 +20,9 @@ class FishDetectionModel:
             # self.model = load.model...
             pass
 
+        if args.model_type:
+            # Choose to use a different model than the default
+            self.model = args.model_type
         self.args = args
 
     def build_model(self, num_classes=2, pretrained=True):
