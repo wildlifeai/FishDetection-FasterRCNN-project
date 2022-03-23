@@ -11,3 +11,4 @@ venv.bak/
 # Libraries
 .idea/
 wandb/
+_pycache_/
