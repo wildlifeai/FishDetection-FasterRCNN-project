@@ -1,4 +1,5 @@
 import argparse
+import time
 from fish_detection_model import FishDetectionModel
 
 LEARNING_RATE = 0.001
@@ -67,6 +68,20 @@ def main():
         "--dry_run",
         action="store_true",
         help="Dry run (do not log to wandb)")
+
+    parser.add_argument(
+        "-lm",
+        "--load_model",
+        type=str,
+        default=None,
+        help="Load the model from a path")
+
+    parser.add_argument(
+        "-o",
+        "--output_path",
+        type=str,
+        default=f"./output/faster-rcnn-model-{time.time()}",
+        help="Define an output path for the model")
 
     args = parser.parse_args()
     model = FishDetectionModel(args)
