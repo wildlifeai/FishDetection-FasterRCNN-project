@@ -55,6 +55,8 @@ class FishDetectionModel:
         # todo: understand the flow of retrieving the data
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+        print(f"using {device} as device")
+
         if self.model is None:
             self.model = self.build_model()
 
@@ -62,9 +64,13 @@ class FishDetectionModel:
 
         # Creating data loader
         dataset = SpyFishAotearoaDataset(self.args.root_path, get_transform(train=False))
+        dataset_test = SpyFishAotearoaDataset(self.args.root_path, get_transform(train=False))
 
         data_loader = torch.utils.data.DataLoader(
             dataset, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
+
+        data_loader_test = torch.utils.data.DataLoader(
+            dataset_test, batch_size=1, shuffle=False, collate_fn=collate_fn)
 
         self.model.to(device)
         verbose = True  # todo: maybe change
@@ -80,7 +86,7 @@ class FishDetectionModel:
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
                 avg_train_loss = self.train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
-                avg_loss = self.evaluate(data_loader, device)
+                avg_loss = self.evaluate(data_loader_test, device)
 
                 if verbose:
                     print(f'Losses of epoch num {epoch} are:')
@@ -102,6 +108,7 @@ class FishDetectionModel:
             images = list(image.to(device) for image in images)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
+            torch.cuda.empty_cache()
             loss_dict = self.model(images, targets)
 
             losses = sum(loss for loss in loss_dict.values())

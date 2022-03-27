@@ -3,8 +3,8 @@ import time
 from fish_detection_model import FishDetectionModel
 
 LEARNING_RATE = 0.001
-EPOCHS = 30
-BATCH_SIZE = 64
+EPOCHS = 5
+BATCH_SIZE = 2
 MOMENTUM = 0.0435
 WEIGHT_DECAY = 0.00149779494703967
 GAMMA = 0.4477536224970189
