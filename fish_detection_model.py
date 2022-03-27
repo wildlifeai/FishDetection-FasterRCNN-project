@@ -4,8 +4,16 @@ import torchvision
 import torch
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from tqdm import tqdm
-
 from SpyFishAotearoaDataset import SpyFishAotearoaDataset
+import utils.transformers as T
+from utils.general_utils import collate_fn
+
+
+def get_transform(train):
+    transforms = [T.ToTensor()]
+    if train:
+        transforms.append(T.RandomHorizontalFlip(0.5))
+    return T.Compose(transforms)
 
 
 class FishDetectionModel:
@@ -45,28 +53,27 @@ class FishDetectionModel:
     def train(self):
         # todo: saving the image and the box in w&b?
         # todo: understand the flow of retrieving the data
-        print(self.args)
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-        if self.model is not None:
+        if self.model is None:
             self.model = self.build_model()
 
-        #todo: create a data loader for validation and training
+        # todo: create a data loader for validation
 
         # Creating data loader
-        dataset = SpyFishAotearoaDataset(self.args.root_path)
+        dataset = SpyFishAotearoaDataset(self.args.root_path, get_transform(train=False))
 
         data_loader = torch.utils.data.DataLoader(
-            dataset, batch_size=self.args.batch_size, shuffle=True)
-
+            dataset, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
 
         self.model.to(device)
-        verbose = True
+        verbose = True  # todo: maybe change
         params = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = torch.optim.SGD(params, lr=self.args.learning_rate, momentum=self.args.momentum,
                                     weight_decay=self.args.weight_decay)
 
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.learning_rate_size, gamma=self.args.gamma)
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.learning_rate_size,
+                                                       gamma=self.args.gamma)
 
         with wandb.init(config=vars(self.args)):
             for epoch in range(self.args.epochs):
@@ -81,7 +88,6 @@ class FishDetectionModel:
                     print('Validation loss: {}'.format(avg_loss))
 
                 wandb.log({"epoch": epoch + 1, "train_loss": avg_train_loss, "validation_loss": avg_loss})
-                # todo: ask Eran if we need another metric? we think adding IOU and accuracy?
 
             # Saving the model in the specified path
             torch.save(self.model, self.args.output_path)
