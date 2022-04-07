@@ -7,6 +7,7 @@ from tqdm import tqdm
 from SpyFishAotearoaDataset import SpyFishAotearoaDataset
 import utils.transformers as T
 from utils.general_utils import collate_fn
+from torchvision.ops import box_iou
 
 
 def get_transform(train):
@@ -86,14 +87,14 @@ class FishDetectionModel:
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
                 avg_train_loss = self.train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
-                avg_loss = self.evaluate(data_loader_test, device)
+                avg_iou = self.evaluate(data_loader_test, device)
 
                 if verbose:
                     print(f'Losses of epoch num {epoch} are:')
                     print('Train loss: {}'.format(avg_train_loss))
-                    print('Validation loss: {}'.format(avg_loss))
+                    print('Validation average IOU: {}'.format(avg_iou))
 
-                wandb.log({"epoch": epoch + 1, "train_loss": avg_train_loss, "validation_loss": avg_loss})
+                wandb.log({"epoch": epoch + 1, "train_loss": avg_train_loss, "validation_avg_iou": avg_iou})
 
             # Saving the model in the specified path
             torch.save(self.model, self.args.output_path)
@@ -127,7 +128,8 @@ class FishDetectionModel:
         # todo: check about to.device(CPU)
         self.model.eval()
 
-        avg_loss = 0
+        avg_iou = 0
+        boxes_num = 0  # How many boxes the model found, for calculating IOU
         with torch.no_grad():
             if verbose:
                 print('Starting validation')
@@ -136,11 +138,12 @@ class FishDetectionModel:
                 images = list(image.to(device) for image in images)
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-                loss_dict = self.model(images, targets)
-                total_loss = sum(loss for loss in loss_dict.values())
-                avg_loss += total_loss.item()
+                response = self.model(images)
+                batch_iou = box_iou(targets[0]["boxes"], response[0]["boxes"])
+                avg_iou += torch.sum(batch_iou).item()
+                boxes_num += response[0]["boxes"].shape[1]  # TODO:   avg not right
 
-        return avg_loss / len(val_set.dataset)
+        return avg_iou / boxes_num
 
     def predict(self):
         # todo: complete

@@ -1,3 +1,4 @@
+import os
 import argparse
 import time
 from fish_detection_model import FishDetectionModel
@@ -99,6 +100,10 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.output_path is None and not os.path.isdir('./output'):
+        os.mkdir("./output")
+
     model = FishDetectionModel(args)
     model.train()
 
