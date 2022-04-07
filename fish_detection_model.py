@@ -61,10 +61,8 @@ class FishDetectionModel:
         if self.model is None:
             self.model = self.build_model()
 
-        # todo: create a data loader for validation
-
         # Creating data loader
-        dataset = SpyFishAotearoaDataset(self.args.root_path, get_transform(train=False))
+        dataset = SpyFishAotearoaDataset(self.args.root_path, get_transform(train=True))
         dataset_test = SpyFishAotearoaDataset(self.args.root_path, get_transform(train=False))
 
         data_loader = torch.utils.data.DataLoader(
@@ -141,10 +139,9 @@ class FishDetectionModel:
                 response = self.model(images)
                 batch_iou = box_iou(targets[0]["boxes"], response[0]["boxes"])
                 avg_iou += torch.sum(batch_iou).item()
-                boxes_num += response[0]["boxes"].shape[1]  # TODO:   avg not right
+                boxes_num += response[0]["boxes"].shape[1]
 
         return avg_iou / boxes_num
 
     def predict(self):
-        # todo: complete
         pass
