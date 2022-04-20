@@ -1,6 +1,8 @@
 import os
 import argparse
 import random
+
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -11,6 +13,9 @@ DEFAULT_VALIDATION_SIZE = 0.1
 
 def get_image_name(label_file_name):
     return label_file_name.split(".")[0] + ".jpg"
+
+def get_avg_area(h_list, w_list):
+    return [h * w for h, w in zip(h_list, w_list)]
 
 
 def write_file(dir_path, files_names, output_name):
@@ -34,20 +39,26 @@ def eda(df):
     :param df: Pandas dataframe
     """
     # Number of objects in an image - aggregate by image-name
-    grouped = df.groupby(["image_name", "label"]).size().reset_index(name='count')
-    print(f"Mean number of objects in an image {grouped['count'].mean()}")
-    grouped['count'].hist()
+    lens = df.applymap(lambda x: len(x))["label"]
+    print(f"Mean number of objects in an image {lens.mean()}")
+    plt.title("Histogram of number of objects in an image")
+    lens.hist()
     plt.show()
 
     # Classes
-    grouped = df.groupby("label").size().reset_index(name='count')
-    print(f"classes distribution:\n {grouped}")
-    grouped.plot.bar(x="label", y="size")
+    classes = df["label"].explode()
+    print(f"classes distribution:\n {classes.value_counts()}")
+    plt.title("Classes Distribution")
+    classes.hist()
+    plt.show()
 
     # Size of boxes
-    grouped = df.groupby("box_size").size().reset_index(name='count')
-    print(f"Mean box area {grouped['count'].mean()}")
-    grouped['count'].hist()
+    areas = df[['h', 'w']].apply(lambda x: get_avg_area(x[0], x[1]), axis=1)
+    areas = areas.explode()
+    print(f"Mean box area {areas.mean()}")
+    plt.title("Histogram of Box Area")
+    areas.hist()
+    plt.show()
 
 
 def parse_label_directory(dir_path, train_size, validation_size, output_path) -> None:
