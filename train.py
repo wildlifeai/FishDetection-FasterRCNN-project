@@ -88,21 +88,21 @@ def main():
         "-o",
         "--output_path",
         type=str,
-        default=f"./output/faster-rcnn-model-{time.time()}",
+        default=f".\\output\\faster-rcnn-model-{time.time()}",
         help="Define an output path for the model")
 
     parser.add_argument(
-        "-rp",
-        "--root_path",
+        "-dp",
+        "--data_path",
         type=str,
-        default='./first_image/',
-        help="A path to the images folder"
+        default='.\\data',
+        help="A path to the data folder"
     )
 
     args = parser.parse_args()
 
-    if not os.path.isdir('./output'):
-        os.mkdir("./output")
+    if not os.path.isdir('.\\output'):
+        os.mkdir(".\\output")
 
     model = FishDetectionModel(args)
     model.train()

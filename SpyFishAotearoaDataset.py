@@ -6,21 +6,22 @@ from PIL import Image
 
 
 class SpyFishAotearoaDataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir, transforms):
+    def __init__(self, root_dir, file_name, transforms):
         self.root_dir = root_dir
         self.transforms = transforms
-        self.table = pd.read_csv(os.path.join(root_dir, "None_classifications.csv"), converters={
+        file_path = os.path.join(root_dir, "output", file_name)
+        self.table = pd.read_csv(file_path, converters={
             "x": ast.literal_eval,
             "y": ast.literal_eval,
             "h": ast.literal_eval,
             "w": ast.literal_eval,
             "label": ast.literal_eval
         })
-        self.imgs = os.path.join(root_dir, "Images")
+        self.imgs_path = os.path.join(root_dir, "images")
 
     def __getitem__(self, idx):
-        img_name = self.table.loc[idx].https_location.split('/')[-1]
-        img_path = os.path.join(self.root_dir, "Images", img_name).replace("\\", "/")
+        img_name = self.table.loc[idx].image_name
+        img_path = os.path.join(self.imgs_path, img_name)
 
         img = Image.open(img_path).convert("RGB")
 
@@ -28,10 +29,10 @@ class SpyFishAotearoaDataset(torch.utils.data.Dataset):
         boxes = []
 
         for i in range(num_objs):
-            x = int(self.table.loc[idx].x[i])
-            y = int(self.table.loc[idx].y[i])
-            width = int(self.table.loc[idx].w[i])
-            height = int(self.table.loc[idx].h[i])
+            x = self.table.loc[idx].x[i]
+            y = self.table.loc[idx].y[i]
+            width = self.table.loc[idx].w[i]
+            height = self.table.loc[idx].h[i]
 
             boxes.append([x, y, x + width, y + height])
 
