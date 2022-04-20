@@ -69,8 +69,8 @@ class FishDetectionModel:
         # todo: create a data loader for validation
 
         # Creating data loader
-        dataset = SpyFishAotearoaDataset(self.args.root_path, get_transform(train=True))
-        dataset_test = SpyFishAotearoaDataset(self.args.root_path, get_transform(train=False))
+        dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
+        dataset_test = SpyFishAotearoaDataset(self.args.data_path, "validation.csv", get_transform(train=False))
 
         data_loader = torch.utils.data.DataLoader(
             dataset, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
