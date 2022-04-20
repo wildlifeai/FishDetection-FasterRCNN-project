@@ -2,6 +2,7 @@ import os
 import argparse
 import random
 import pandas as pd
+from matplotlib import pyplot as plt
 
 DEFAULT_OUTPUT_FOLDER = ".\\data\\output"
 DEFAULT_TRAINING_SIZE = 0.9
@@ -26,6 +27,29 @@ def write_file(dir_path, files_names, output_name):
                                 'image_name': get_image_name(filename)}, ignore_index=True)
 
     df.to_csv(output_name)
+    return df
+
+
+def eda(df):
+    """
+    Prints EDA data on the data
+    :param df: Pandas dataframe
+    """
+    # Number of objects in an image - aggregate by image-name
+    grouped = df.groupby(["image_name", "label"]).size().reset_index(name='count')
+    print(f"Mean number of objects in an image {grouped['count'].mean()}")
+    grouped['count'].hist()
+    plt.show()
+
+    # Classes
+    grouped = df.groupby("label").size().reset_index(name='count')
+    print(f"classes distribution:\n {grouped}")
+    grouped.plot.bar(x="label", y="size")
+
+    # Size of boxes
+    grouped = df.groupby("box_size").size().reset_index(name='count')
+    print(f"Mean box area {grouped['count'].mean()}")
+    grouped['count'].hist()
 
 
 def parse_label_directory(dir_path, train_size, validation_size, output_path) -> None:
@@ -41,6 +65,9 @@ def parse_label_directory(dir_path, train_size, validation_size, output_path) ->
     file_list_len = len(file_list)
     train = int(file_list_len * train_size)
     validation = train + int(file_list_len * validation_size) + 1
+
+    # EDA
+    eda(write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv")))
 
     write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv"))
     write_file(dir_path, file_list[train:validation], os.path.join(output_path, "validation.csv"))
