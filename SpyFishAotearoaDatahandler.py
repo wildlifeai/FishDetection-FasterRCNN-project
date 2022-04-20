@@ -29,7 +29,7 @@ def write_file(dir_path, files_names, output_name):
                         'h': list(img.h), 'w': list(img.w),
                         'image_name': get_image_name(filename)}, ignore_index=True)
 
-    df.to_csv(output_name)
+    df.to_csv(output_name, index=False)
     return df
 
 
@@ -76,7 +76,7 @@ def parse_label_directory(dir_path, train_size, validation_size, output_path) ->
     validation = train + int(file_list_len * validation_size) + 1
 
     # EDA
-    eda(write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv")))
+    # eda(write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv")))
 
     write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv"))
     write_file(dir_path, file_list[train:validation], os.path.join(output_path, "validation.csv"))

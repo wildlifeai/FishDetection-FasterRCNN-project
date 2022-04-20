@@ -1,7 +1,5 @@
 import os
-
 from PIL.Image import Image
-
 from utils.plot_image_bounding_box import add_bounding_boxes
 import wandb
 import torchvision
@@ -110,7 +108,7 @@ class FishDetectionModel:
 
 
             # Saving the model in the specified path
-            # torch.save(self.model, self.args.output_path) todo: Change path once training models
+            torch.save(self.model, self.args.output_path) # todo: Change path once training models
 
     def _eval_iou_and_log_img(self, images, targets):
         self.model.eval()
@@ -121,7 +119,7 @@ class FishDetectionModel:
         n_boxes = 0
 
         for i, img in enumerate(images):
-            img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'][i].cpu(), results[i]['scores'].cpu(), results[i]['boxes'].cpu()))
+            img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'].cpu(), results[i]['scores'].cpu(), results[i]['boxes'].cpu()))
             batch_iou_sum += box_iou(targets[i]["boxes"].cpu(), results[i]["boxes"].cpu())
             n_boxes += results[i]["boxes"].shape[0]
 
@@ -177,7 +175,7 @@ class FishDetectionModel:
 
                 if img_log:
                     iou_results = self._eval_iou_and_log_img(images, targets)
-                    avg_iou += iou_results[0]
+                    avg_iou += iou_results[0].sum()
                     boxes_num += iou_results[1]
                     self.model.train()
 
