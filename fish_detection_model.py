@@ -1,4 +1,8 @@
 import os
+
+from PIL.Image import Image
+
+from utils.plot_image_bounding_box import add_bounding_boxes
 import wandb
 import torchvision
 import torch
@@ -123,7 +127,6 @@ class FishDetectionModel:
         return avg_train_loss / len(data_loader.dataset)
 
     def evaluate(self, val_set, device, verbose=True):
-        # todo: check about to.device(CPU)
         self.model.eval()
 
         avg_iou = 0
@@ -143,5 +146,29 @@ class FishDetectionModel:
 
         return avg_iou / boxes_num
 
-    def predict(self):
-        pass
+    def predict(self, img_path, device, class_names, cls_tresh=0.5, iou_tresh=0.5):
+        """
+        Get prediction on images from dataloader
+        :param dataloader
+        :return: Classification and bounding boxes for each image provided
+        """
+        self.model.eval()
+        with torch.no_grad():
+            img = Image.open(img_path)
+            transform = T.Compose([T.ToTensor()])
+            img = transform(img).to(device)
+            pred = self.model([img])
+            pred_class = [class_names[i] for i in list(pred[0]['labels'].cpu().numpy())]
+            pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().cpu().numpy())]
+            pred_score = list(pred[0]['scores'].detach().cpu().numpy())
+
+            pred_t = [pred_score.index(x) for x in pred_score if x > cls_tresh][-1]
+
+            pred_boxes = pred_boxes[:pred_t + 1]
+            pred_class = pred_class[:pred_t + 1]
+            pred_score = pred_score[:pred_t + 1]
+
+            images = add_bounding_boxes(img, pred_class, pred_score, pred_boxes, thresh=iou_tresh)
+            return images, pred_boxes, pred_class, pred_score
+
+
