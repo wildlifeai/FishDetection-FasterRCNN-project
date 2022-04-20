@@ -13,17 +13,15 @@ def get_image_name(label_file_name):
 
 
 def write_file(dir_path, files_names, output_name):
-    df = pd.DataFrame(columns=['label', 'x', 'y', 'h', 'w', 'image_name', 'box_size'])
+    df = pd.DataFrame(columns=['label', 'x', 'y', 'h', 'w', 'image_name'])
 
+    # currently we support only classification for one type there fore the label will be 1 (label zero means background)
+    # todo: change the label column into the real numbers
     for filename in files_names:
-        with open(os.path.join(dir_path, filename)) as f:
-            content = f.read().splitlines()
-            for line in content:
-                splitted_line = line.split(" ")
-                df = df.append({'label': splitted_line[0], 'x': float(splitted_line[1]), 'y': float(splitted_line[2]),
-                                'h': float(splitted_line[3]), 'w': float(splitted_line[4]),
-                                'box_size': float(splitted_line[3]) * float(splitted_line[4]),
-                                'image_name': get_image_name(filename)}, ignore_index=True)
+        img = pd.read_csv(os.path.join(dir_path, filename), names=['label', 'x', 'y', 'h', 'w'], sep=' ')
+        df = df.append({'label': [1] * len(img.label), 'x': list(img.x), 'y': list(img.y),
+                        'h': list(img.h), 'w': list(img.w),
+                        'image_name': get_image_name(filename)}, ignore_index=True)
 
     df.to_csv(output_name)
 
@@ -84,11 +82,11 @@ def main():
     args = parser.parse_args()
 
     # generating the default output folder if not exists
-    if args.output_path == DEFAULT_OUTPUT_FOLDER and not os.path.isdir(DEFAULT_OUTPUT_FOLDER):
+    if not os.path.isdir(DEFAULT_OUTPUT_FOLDER):
         os.mkdir(DEFAULT_OUTPUT_FOLDER)
 
     parse_label_directory(os.path.join(args.data_path, "labels"), args.train_size, args.validation_size,
-                          args.output_path)
+                          DEFAULT_OUTPUT_FOLDER)
 
 
 if __name__ == '__main__':
