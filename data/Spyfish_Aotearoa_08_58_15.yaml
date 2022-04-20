@@ -1,0 +1,24 @@
+names: [bait, banded_weedfish, banded_wrasse, barracouta, bigeye, black_angelfish,
+  black_cod, blue_cod, blue_knifefish, blue_maomao, blue_moki, blue_finned_butterfish,
+  bluefin_gurnard, bluefish, broadnose_sevengill_shark, bronze_whaler_shark, butterfly_perch,
+  carpet_shark, clown_toado, combfish, common_roughy, common_sole, common_warehou,
+  conger_eel, copper_moki, crested_blenny, crimson_cleanerfish, eagle_ray, elegant_wrasse,
+  eye_stripe_surgeonfish, foxfish, giant_boarfish, giant_stargazer, girdled_wrasse,
+  goatfishes, gold_ribbon_grouper, golden_snapper, green_wrasse, greenbone_butterfish,
+  grey_knifefish, hagfish, hapuku, hiwihiwi, jack_mackerel, john_dory, kahawai, kingfish,
+  koheru, lavender_lizardfish, long_finned_boarfish, long_tailed_stingray, lord_howe_coralfish,
+  mado, marblefish, marine_mammal, mimic_blenny, moray_eel, northern_splendid_perch,
+  notch_head_marblefish, nothing_here, octopus, opalfish, orange_wrasse, other, painted_moki,
+  parore, pink_maomao, piper, porae, porcupinefish, rainbowfish, red_cod, red_lizardfish,
+  red_moki, red_pigfish, red__and_half_banded_perches, red_lined_perch, rock_cod,
+  rock_lobster, sand_flounder, sandager's_wrasse, scarlet_wrasse, school_shark, scorpionfish,
+  sea_perch, seabird, seahorse, short_tailed_stingray, silver_and_grey_drummers, silver_sweep,
+  single_spot_demoiselle, slender_roughy, small_scaled_notothenid, smooth_leatherjacket,
+  snapper, southern_bastard_cod, southern_pigfish, southern_splendid_perch, spiny_dogfish,
+  spiny_sea_dragon, spotted_black_grouper, spotted_sawtail, spotted_stargazer, spotty,
+  striped_boarfish, striped_trumpeter, tarakihi, telescopefish, thornfish, toadstool_grouper,
+  trevally, triplefin, two_spot_demoiselle, yellow_demoiselle, yellow_banded_perch,
+  yellow_eyed_mullet]
+nc: 116
+train: low_agg/train.txt
+val: low_agg/valid.txt
