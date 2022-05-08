@@ -9,8 +9,10 @@ from SpyFishAotearoaDataset import SpyFishAotearoaDataset
 import utils.transformers as T
 from utils.general_utils import collate_fn
 from utils.plot_image_bounding_box import add_bounding_boxes
+from torchvision.ops import box_iou
 
 LOG_TRAIN_FREQ = 10
+VALIDATION_IOU_LOG = False
 
 
 def get_transform(train):
@@ -29,13 +31,7 @@ class FishDetectionModel:
     def __init__(self, args):
         # initialize wandb logging for the project
         wandb.init(project="project-wildlife-ai", entity="adi-ohad-heb-uni")
-
         self.model = None
-
-        # todo: Add about dry run and meaning
-        if args.dry_run:
-            os.environ['WANB_MODE'] = 'dryrun'
-
         self.args = args
 
     def build_model(self, num_classes=2, pretrained=True):
@@ -76,7 +72,7 @@ class FishDetectionModel:
             dataset_test, batch_size=1, shuffle=False, collate_fn=collate_fn)
 
         self.model.to(device)
-        verbose = True # todo Add parameter of verbose
+        verbose = self.args.verbose
 
         params = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = torch.optim.SGD(params, lr=self.args.learning_rate, momentum=self.args.momentum,
@@ -91,10 +87,10 @@ class FishDetectionModel:
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
                 avg_train_loss = self.train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
-                avg_val_loss, avg_iou = self.evaluate(data_loader_test, should_log, device)
+                avg_val_loss, avg_iou = self.evaluate(data_loader_test, should_log, device, verbose)
 
                 if verbose:
-                    print(f'Losses of epoch num {epoch + 1} are:')
+                    print(f'\nLosses of epoch num {epoch + 1} are:')
                     print('Train loss: {}'.format(avg_train_loss))
                     print('Validation loss: {}'.format(avg_val_loss))
                     if should_log:
@@ -109,32 +105,46 @@ class FishDetectionModel:
             # Saving the model in the specified path
             torch.save(self.model, self.args.output_path)
 
-    # todo: adding boolean parameter for logging images and logging IOU
-    def _eval_iou_and_log_img(self, images, targets):
+    def log_to_wb(self, images, targets, log_img=True, log_iou=True):
+        """
+        Logging predicted images and IOU to weights and biases
+        :param images: The images themselves
+        :param targets: The real results of the images
+        :param log_img: Boolean indicate whether to log the images
+        :param log_iou:  Boolean indicate whether to log the IOU data
+        :return: batch IOU sum and number of boxes if log_iou is true else None
+        """
         with torch.no_grad():
-            self.model.eval()
-            results = self.model(images)
-
             img_boxes = []
             batch_iou_sum = 0
             n_boxes = 0
 
+            self.model.eval()
+            results = self.model(images)
+
             for i, img in enumerate(images):
-                img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'].cpu(),
-                                                    results[i]['scores'].cpu(), results[i]['boxes'].cpu(), thresh=0.05))
-                # batch_iou_sum += box_iou(targets[i]["boxes"].cpu(), results[i]["boxes"].cpu())
-                # n_boxes += results[i]["boxes"].shape[0]
+                if log_img:
+                    img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'].cpu(),
+                                                        results[i]['scores'].cpu(), results[i]['boxes'].cpu(),
+                                                        thresh=0.20))
 
-            wandb.log({"classifications_images": [wandb.Image(image) for image in img_boxes]})
+                if log_iou:
+                    batch_iou_sum += box_iou(targets[i]["boxes"].cpu(), results[i]["boxes"].cpu())
+                    n_boxes += results[i]["boxes"].shape[0]
 
-            # return batch_iou_sum, n_boxes  # TODO: avg not right
+            self.model.train()
+
+            if log_img:
+                wandb.log({"classifications_images": [wandb.Image(image) for image in img_boxes]})
+
+            if log_iou:
+                return batch_iou_sum, n_boxes  # TODO: avg not right
 
     def train_one_epoch(self, optimizer, data_loader, device, verbose=True):
         self.model.train()
         avg_train_loss = 0
 
         for i, (images, targets) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
-            self.model.train()
             images = list(image.to(device) for image in images)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -153,7 +163,7 @@ class FishDetectionModel:
 
             # Logging train images to w&b after model prediction
             if i % LOG_TRAIN_FREQ == 0:
-                self._eval_iou_and_log_img(images, targets)
+                self.log_to_wb(images, targets, log_img=True, log_iou=False)
 
         return avg_train_loss / len(data_loader.dataset)
 
@@ -168,6 +178,7 @@ class FishDetectionModel:
         with torch.no_grad():
             if verbose:
                 print('\nStarting validation')
+
             for images, targets in tqdm(val_set, position=0, leave=True) if verbose else val_set:
                 images = list(image.to(device) for image in images)
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
@@ -177,13 +188,11 @@ class FishDetectionModel:
                 losses = sum(loss for loss in loss_dict.values())
                 avg_val_loss += losses.item()
 
-                # if img_log: todo: remove marking once done with over-fitting
-                #     iou_results = self._eval_iou_and_log_img(images, targets)
-                #     avg_iou += iou_results[0].sum()
-                #     boxes_num += iou_results[1]
-                #     self.model.train()
+                if VALIDATION_IOU_LOG:
+                    iou_results = self.log_to_wb(images, targets, img_log)
+                    avg_iou += iou_results[0].sum()
+                    boxes_num += iou_results[1]
 
-        # return avg_val_loss, avg_iou / boxes_num if img_log else 0
         return avg_val_loss / len(val_set), 0 if img_log else avg_val_loss / len(val_set)
 
     def predict(self, img_path, device, class_names, cls_thresh=0.5, iou_thresh=0.35):

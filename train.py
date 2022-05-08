@@ -65,12 +65,6 @@ def main():
         help="weight decay of the optimizer")
 
     parser.add_argument(
-        "-q",
-        "--dry_run",
-        action="store_true",
-        help="Dry run (do not log to wandb)")
-
-    parser.add_argument(
         "-lm",
         "--load_model",
         type=str,

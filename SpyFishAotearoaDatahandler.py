@@ -9,11 +9,11 @@ DEFAULT_TRAINING_SIZE = 0.9
 DEFAULT_VALIDATION_SIZE = 0.1
 
 
-def extract_image_name(label_file_name):
+def extract_image_name(label_file_name) -> str:
     return label_file_name.split(".")[0] + ".jpg"
 
 
-def get_avg_area(h_list, w_list):
+def get_avg_area(h_list, w_list) -> list:
     return [h * w for h, w in zip(h_list, w_list)]
 
 
