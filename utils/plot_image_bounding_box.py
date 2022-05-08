@@ -16,7 +16,7 @@ def get_transform(train):  #TODO: remove when done with simulation
     return T.Compose(transforms)
 
 
-def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2, text_size=0.8, text_th=1,
+def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2, text_size=0.5, text_th=1,
                        color_box=(255, 255, 255)):
     """
     Returns the image with boxes and labels as PIL
@@ -47,8 +47,8 @@ def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2,
                        int(boxes[i][3])),
                       color=color_box, thickness=rect_th)
         cv2.putText(img, "fish" + ":" + str(round(pred_score[i], 3)),
-                    (int(boxes[i][0]), int(boxes[i][1])),
-                    cv2.FONT_HERSHEY_DUPLEX, text_size, color_box, thickness=text_th)  # TODO: add real class label
+                    (int(boxes[i][0]+ rect_th), int(boxes[i][1])+20),
+                    cv2.FONT_HERSHEY_SIMPLEX, text_size, color_box, thickness=text_th)  # TODO: add real class label
 
     # turn to PIL
     return Image.fromarray((img * 255).astype(np.uint8))
@@ -56,7 +56,7 @@ def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2,
 
 if __name__ == '__main__':
     # TODO: remove when done with simulation
-    dataset_test = SpyFishAotearoaDataset("../first_image/", get_transform(train=False))
+    dataset_test = SpyFishAotearoaDataset("../data/", "train.csv", get_transform(train=False))
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test, batch_size=1, shuffle=False, collate_fn=collate_fn)
     iterable = tqdm(data_loader_test, position=0, leave=True)

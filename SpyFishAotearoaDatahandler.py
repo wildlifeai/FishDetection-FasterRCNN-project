@@ -35,11 +35,13 @@ def write_file(dir_path, files_names, output_name):
 
 
 # todo complete this function
-def eda(df) -> None:
+def save_eda(df) -> None:
     """
-    Prints EDA data on the data
+    Saves EDA on the data
     :param df: Pandas dataframe
     """
+    eda = {}  # Dict to collect statistical data on the
+
     # Number of objects in an image - aggregate by image-name
     lens = df.applymap(lambda x: len(x))["label"]
     print(f"Mean number of objects in an image {lens.mean()}")
@@ -78,7 +80,7 @@ def parse_data(dir_path, train_size, validation_size, output_path) -> None:
     validation = train + int(file_list_len * validation_size) + 1
 
     # EDA
-    # eda(write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv")))
+    save_eda(write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv")))
 
     write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv"))
     write_file(dir_path, file_list[train:validation], os.path.join(output_path, "validation.csv"))
