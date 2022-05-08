@@ -1,7 +1,6 @@
 import os
 import argparse
 import random
-
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -14,6 +13,7 @@ DEFAULT_VALIDATION_SIZE = 0.1
 def get_image_name(label_file_name):
     return label_file_name.split(".")[0] + ".jpg"
 
+
 def get_avg_area(h_list, w_list):
     return [h * w for h, w in zip(h_list, w_list)]
 
@@ -25,8 +25,10 @@ def write_file(dir_path, files_names, output_name):
     # todo: change the label column into the real numbers
     for filename in files_names:
         img = pd.read_csv(os.path.join(dir_path, filename), names=['label', 'x', 'y', 'h', 'w'], sep=' ')
-        df = df.append({'label': [1] * len(img.label), 'x': list(img.x), 'y': list(img.y),
-                        'h': list(img.h), 'w': list(img.w),
+        df = df.append({'label': [1] * len(img.label), 'x': list(map(lambda x: float(x) * 1000, img.x)),
+                        'y': list(map(lambda x: float(x) * 1000, img.y)),
+                        'h': list(map(lambda x: float(x) * 1000, img.h)),
+                        'w': list(map(lambda x: float(x) * 1000, img.w)),
                         'image_name': get_image_name(filename)}, ignore_index=True)
 
     df.to_csv(output_name, index=False)

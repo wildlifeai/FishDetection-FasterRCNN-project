@@ -19,7 +19,7 @@ def get_transform(train):  #TODO: remove when done with simulation
     return T.Compose(transforms)
 
 
-def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.0, rect_th=2, text_size=0.8, text_th=1,
+def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2, text_size=0.8, text_th=1,
                        color_box=(255, 255, 255)):
     """
     Returns the image with boxes and labels as PIL

@@ -18,7 +18,7 @@ class ModelTestEval:
 
         truth = None
         for cur_iou in range(iou_range[0], iou_range[1], iou_step):
-            results = self.model.predict(self.dataset.image, "cpu", ["fish"], iou_tresh=iou_step)
+            results = self.model.predict(self.dataset.image, "cpu", ["fish"], iou_thresh=iou_step)
             for images, targets in iterable:
                 images = list(image.to(device) for image in images)
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]

@@ -55,16 +55,12 @@ class FishDetectionModel:
         return model
 
     def train(self):
-        # todo: saving the image and the box in w&b?
-        # todo: understand the flow of retrieving the data
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         print(f"using {device} as device")
 
         if self.model is None:
-            self.model = self.build_model()
-
-        # todo: create a data loader for validation
+            self.model = self.build_model(2, False)
 
         # Creating data loader
         dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
@@ -87,14 +83,14 @@ class FishDetectionModel:
 
         with wandb.init(config=vars(self.args)):
             for epoch in range(self.args.epochs):
-                should_log = epoch % 10 == 0
+                should_log = epoch % 1 == 0
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
                 avg_train_loss = self.train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
                 avg_val_loss, avg_iou = self.evaluate(data_loader_test, should_log, device)
 
                 if verbose:
-                    print(f'Losses of epoch num {epoch} are:')
+                    print(f'Losses of epoch num {epoch + 1} are:')
                     print('Train loss: {}'.format(avg_train_loss))
                     print('Validation loss: {}'.format(avg_val_loss))
                     if should_log:
@@ -106,34 +102,34 @@ class FishDetectionModel:
                 else:
                     wandb.log({"epoch": epoch + 1, "train_loss": avg_train_loss, "validation_loss": avg_val_loss})
 
-
             # Saving the model in the specified path
             torch.save(self.model, self.args.output_path) # todo: Change path once training models
 
     def _eval_iou_and_log_img(self, images, targets):
-        self.model.eval()
-        results = self.model(images)
+        with torch.no_grad():
+            self.model.eval()
+            results = self.model(images)
 
-        img_boxes = []
-        batch_iou_sum = 0
-        n_boxes = 0
+            img_boxes = []
+            batch_iou_sum = 0
+            n_boxes = 0
 
-        for i, img in enumerate(images):
-            img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'].cpu(), results[i]['scores'].cpu(), results[i]['boxes'].cpu()))
-            batch_iou_sum += box_iou(targets[i]["boxes"].cpu(), results[i]["boxes"].cpu())
-            n_boxes += results[i]["boxes"].shape[0]
+            for i, img in enumerate(images):
+                img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'].cpu(),
+                                                    results[i]['scores'].cpu(), results[i]['boxes'].cpu(), thresh=0.05))
+                # batch_iou_sum += box_iou(targets[i]["boxes"].cpu(), results[i]["boxes"].cpu())
+                # n_boxes += results[i]["boxes"].shape[0]
 
-        wandb.log({"classifications_images": [wandb.Image(image) for image in img_boxes]})
+            wandb.log({"classifications_images": [wandb.Image(image) for image in img_boxes]})
 
-        return batch_iou_sum, n_boxes  # TODO: avg not right
+            # return batch_iou_sum, n_boxes  # TODO: avg not right
 
     def train_one_epoch(self, optimizer, data_loader, device, verbose=True):
         self.model.train()
-
-        iterable = tqdm(data_loader, position=0, leave=True) if verbose else data_loader
         avg_train_loss = 0
 
-        for images, targets in iterable:
+        for i, (images, targets) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
+            self.model.train()
             images = list(image.to(device) for image in images)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -150,6 +146,9 @@ class FishDetectionModel:
             # Update model parameters from gradients: param -= learning_rate * param.grad
             optimizer.step()
 
+            if i % 10 == 0:
+                self._eval_iou_and_log_img(images, targets)
+
         return avg_train_loss / len(data_loader.dataset)
 
     def evaluate(self, val_set, img_log, device, verbose=True):
@@ -162,9 +161,8 @@ class FishDetectionModel:
 
         with torch.no_grad():
             if verbose:
-                print('Starting validation')
-            iterable = tqdm(val_set, position=0, leave=True) if verbose else val_set
-            for images, targets in iterable:
+                print('\nStarting validation')
+            for images, targets in tqdm(val_set, position=0, leave=True) if verbose else val_set:
                 images = list(image.to(device) for image in images)
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -173,18 +171,23 @@ class FishDetectionModel:
                 losses = sum(loss for loss in loss_dict.values())
                 avg_val_loss += losses.item()
 
-                if img_log:
-                    iou_results = self._eval_iou_and_log_img(images, targets)
-                    avg_iou += iou_results[0].sum()
-                    boxes_num += iou_results[1]
-                    self.model.train()
+                # if img_log: todo: remove marking once done with over-fitting
+                #     iou_results = self._eval_iou_and_log_img(images, targets)
+                #     avg_iou += iou_results[0].sum()
+                #     boxes_num += iou_results[1]
+                #     self.model.train()
 
-        return avg_val_loss, avg_iou / boxes_num if img_log else 0
+        # return avg_val_loss, avg_iou / boxes_num if img_log else 0
+        return avg_val_loss / len(val_set), 0 if img_log else avg_val_loss / len(val_set)
 
-    def predict(self, img_path, device, class_names, cls_tresh=0.5, iou_tresh=0.5):
+    def predict(self, img_path, device, class_names, cls_thresh=0.5, iou_thresh=0.35):
         """
         Get prediction on images from dataloader
-        :param dataloader
+        :param iou_thresh:
+        :param cls_thresh:
+        :param class_names:
+        :param device:
+        :param img_path:
         :return: Classification and bounding boxes for each image provided
         """
         self.model.eval()
@@ -197,11 +200,11 @@ class FishDetectionModel:
             pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().cpu().numpy())]
             pred_score = list(pred[0]['scores'].detach().cpu().numpy())
 
-            pred_t = [pred_score.index(x) for x in pred_score if x > cls_tresh][-1]
+            pred_t = [pred_score.index(x) for x in pred_score if x > cls_thresh][-1]
 
             pred_boxes = pred_boxes[:pred_t + 1]
             pred_class = pred_class[:pred_t + 1]
             pred_score = pred_score[:pred_t + 1]
 
-            images = add_bounding_boxes(img, pred_class, pred_score, pred_boxes, thresh=iou_tresh)
+            images = add_bounding_boxes(img, pred_class, pred_score, pred_boxes, thresh=iou_thresh)
             return images, pred_boxes, pred_class, pred_score
