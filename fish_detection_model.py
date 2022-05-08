@@ -1,6 +1,5 @@
 import os
 from PIL.Image import Image
-from utils.plot_image_bounding_box import add_bounding_boxes
 import wandb
 import torchvision
 import torch
@@ -9,11 +8,17 @@ from tqdm import tqdm
 from SpyFishAotearoaDataset import SpyFishAotearoaDataset
 import utils.transformers as T
 from utils.general_utils import collate_fn
-from torchvision.ops import box_iou
 from utils.plot_image_bounding_box import add_bounding_boxes
+
+LOG_TRAIN_FREQ = 10
 
 
 def get_transform(train):
+    """
+    Apply transformation to the images
+    :param train: A boolean indicate if this dataset is train data set
+    :return: The transformed images
+    """
     transforms = [T.ToTensor()]
     if train:
         transforms.append(T.RandomHorizontalFlip(0.5))
@@ -26,13 +31,10 @@ class FishDetectionModel:
         wandb.init(project="project-wildlife-ai", entity="adi-ohad-heb-uni")
 
         self.model = None
+
+        # todo: Add about dry run and meaning
         if args.dry_run:
             os.environ['WANB_MODE'] = 'dryrun'
-
-        if args.load_model:
-            # todo load model from path
-            # self.model = load.model...
-            pass
 
         self.args = args
 
@@ -55,14 +57,15 @@ class FishDetectionModel:
         return model
 
     def train(self):
-        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         print(f"using {device} as device")
 
+        # create a model if it doesn't have path
         if self.model is None:
             self.model = self.build_model(2, False)
 
-        # Creating data loader
+        # Creating data loaders
         dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
         dataset_test = SpyFishAotearoaDataset(self.args.data_path, "validation.csv", get_transform(train=False))
 
@@ -73,7 +76,8 @@ class FishDetectionModel:
             dataset_test, batch_size=1, shuffle=False, collate_fn=collate_fn)
 
         self.model.to(device)
-        verbose = True  # todo: maybe change
+        verbose = True # todo Add parameter of verbose
+
         params = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = torch.optim.SGD(params, lr=self.args.learning_rate, momentum=self.args.momentum,
                                     weight_decay=self.args.weight_decay)
@@ -103,8 +107,9 @@ class FishDetectionModel:
                     wandb.log({"epoch": epoch + 1, "train_loss": avg_train_loss, "validation_loss": avg_val_loss})
 
             # Saving the model in the specified path
-            torch.save(self.model, self.args.output_path) # todo: Change path once training models
+            torch.save(self.model, self.args.output_path)
 
+    # todo: adding boolean parameter for logging images and logging IOU
     def _eval_iou_and_log_img(self, images, targets):
         with torch.no_grad():
             self.model.eval()
@@ -146,7 +151,8 @@ class FishDetectionModel:
             # Update model parameters from gradients: param -= learning_rate * param.grad
             optimizer.step()
 
-            if i % 10 == 0:
+            # Logging train images to w&b after model prediction
+            if i % LOG_TRAIN_FREQ == 0:
                 self._eval_iou_and_log_img(images, targets)
 
         return avg_train_loss / len(data_loader.dataset)
@@ -181,15 +187,6 @@ class FishDetectionModel:
         return avg_val_loss / len(val_set), 0 if img_log else avg_val_loss / len(val_set)
 
     def predict(self, img_path, device, class_names, cls_thresh=0.5, iou_thresh=0.35):
-        """
-        Get prediction on images from dataloader
-        :param iou_thresh:
-        :param cls_thresh:
-        :param class_names:
-        :param device:
-        :param img_path:
-        :return: Classification and bounding boxes for each image provided
-        """
         self.model.eval()
         with torch.no_grad():
             img = Image.open(img_path)

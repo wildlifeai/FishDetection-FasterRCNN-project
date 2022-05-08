@@ -99,6 +99,14 @@ def main():
         help="A path to the data folder"
     )
 
+    parser.add_argument(
+        "-ver",
+        "--verbose",
+        type=bool,
+        default=True,
+        help="Print more if true"
+    )
+
     args = parser.parse_args()
 
     if not os.path.isdir('.\\output'):

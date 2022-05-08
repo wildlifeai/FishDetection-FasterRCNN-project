@@ -1,7 +1,6 @@
 import os
 import argparse
 import random
-import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -10,7 +9,7 @@ DEFAULT_TRAINING_SIZE = 0.9
 DEFAULT_VALIDATION_SIZE = 0.1
 
 
-def get_image_name(label_file_name):
+def extract_image_name(label_file_name):
     return label_file_name.split(".")[0] + ".jpg"
 
 
@@ -22,20 +21,21 @@ def write_file(dir_path, files_names, output_name):
     df = pd.DataFrame(columns=['label', 'x', 'y', 'h', 'w', 'image_name'])
 
     # currently we support only classification for one type there fore the label will be 1 (label zero means background)
-    # todo: change the label column into the real numbers
+    # The image location are in different measurement therefore multiplying by 1000
     for filename in files_names:
         img = pd.read_csv(os.path.join(dir_path, filename), names=['label', 'x', 'y', 'h', 'w'], sep=' ')
         df = df.append({'label': [1] * len(img.label), 'x': list(map(lambda x: float(x) * 1000, img.x)),
                         'y': list(map(lambda x: float(x) * 1000, img.y)),
                         'h': list(map(lambda x: float(x) * 1000, img.h)),
                         'w': list(map(lambda x: float(x) * 1000, img.w)),
-                        'image_name': get_image_name(filename)}, ignore_index=True)
+                        'image_name': extract_image_name(filename)}, ignore_index=True)
 
     df.to_csv(output_name, index=False)
     return df
 
 
-def eda(df):
+# todo complete this function
+def eda(df) -> None:
     """
     Prints EDA data on the data
     :param df: Pandas dataframe
@@ -63,7 +63,7 @@ def eda(df):
     plt.show()
 
 
-def parse_label_directory(dir_path, train_size, validation_size, output_path) -> None:
+def parse_data(dir_path, train_size, validation_size, output_path) -> None:
     """
     :param output_path:
     :param validation_size:
@@ -83,6 +83,8 @@ def parse_label_directory(dir_path, train_size, validation_size, output_path) ->
     write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv"))
     write_file(dir_path, file_list[train:validation], os.path.join(output_path, "validation.csv"))
     write_file(dir_path, file_list[validation:], os.path.join(output_path, "test.csv"))
+
+    # todo add a dictionary of number and class name
 
 
 def main():
@@ -125,8 +127,8 @@ def main():
     if not os.path.isdir(DEFAULT_OUTPUT_FOLDER):
         os.mkdir(DEFAULT_OUTPUT_FOLDER)
 
-    parse_label_directory(os.path.join(args.data_path, "labels"), args.train_size, args.validation_size,
-                          DEFAULT_OUTPUT_FOLDER)
+    parse_data(os.path.join(args.data_path, "labels"), args.train_size, args.validation_size,
+               DEFAULT_OUTPUT_FOLDER)
 
 
 if __name__ == '__main__':

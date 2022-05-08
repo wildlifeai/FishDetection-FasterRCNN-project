@@ -3,11 +3,8 @@ import matplotlib.pyplot as plt #TODO: remove when done with simulation
 import torch #TODO: remove when done with simulation
 from tqdm import tqdm # TODO: remove when done with simulation
 from PIL import Image
-
 import utils.transformers as T  #TODO: remove when done with simulation
 from utils.general_utils import collate_fn #TODO: remove when done with simulation
-
-
 from SpyFishAotearoaDataset import SpyFishAotearoaDataset #TODO: remove when done with simulation
 import numpy as np
 
