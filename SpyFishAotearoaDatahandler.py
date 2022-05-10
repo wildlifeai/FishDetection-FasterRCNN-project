@@ -1,3 +1,4 @@
+import json
 import os
 import argparse
 import random
@@ -35,15 +36,17 @@ def write_file(dir_path, files_names, output_name):
 
 
 # todo complete this function
-def save_eda(df) -> None:
+def save_eda(df, filepath) -> None:
     """
     Saves EDA on the data
+    :param filepath: The file to save statistics on, including name but not extension
     :param df: Pandas dataframe
     """
-    eda = {}  # Dict to collect statistical data on the
+    eda = {}  # Dict to collect statistical data
 
     # Number of objects in an image - aggregate by image-name
     lens = df.applymap(lambda x: len(x))["label"]
+    eda["n_objects"] = lens.to_dict()
     print(f"Mean number of objects in an image {lens.mean()}")
     plt.title("Histogram of number of objects in an image")
     lens.hist()
@@ -51,6 +54,7 @@ def save_eda(df) -> None:
 
     # Classes
     classes = df["label"].explode()
+    eda["n_class"] = classes.to_dict()
     print(f"classes distribution:\n {classes.value_counts()}")
     plt.title("Classes Distribution")
     classes.hist()
@@ -59,10 +63,15 @@ def save_eda(df) -> None:
     # Size of boxes
     areas = df[['h', 'w']].apply(lambda x: get_avg_area(x[0], x[1]), axis=1)
     areas = areas.explode()
+    eda["box_area"] = areas.to_dict()
     print(f"Mean box area {areas.mean()}")
     plt.title("Histogram of Box Area")
     areas.hist()
     plt.show()
+
+    # Save to file
+    with open(f'{filepath}.json', 'w') as outfile:
+        json.dump(eda, outfile)
 
 
 def parse_data(dir_path, train_size, validation_size, output_path) -> None:
@@ -80,7 +89,7 @@ def parse_data(dir_path, train_size, validation_size, output_path) -> None:
     validation = train + int(file_list_len * validation_size) + 1
 
     # EDA
-    save_eda(write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv")))
+    save_eda(write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv")), "train_json")
 
     write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv"))
     write_file(dir_path, file_list[train:validation], os.path.join(output_path, "validation.csv"))
