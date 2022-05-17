@@ -4,6 +4,7 @@ import argparse
 import random
 import pandas as pd
 from matplotlib import pyplot as plt
+import cv2
 
 DEFAULT_OUTPUT_FOLDER = ".\\data\\output"
 DEFAULT_TRAINING_SIZE = 0.9
@@ -23,13 +24,17 @@ def write_file(dir_path, files_names, output_name):
 
     # currently we support only classification for one type there fore the label will be 1 (label zero means background)
     # The image location are in different measurement therefore multiplying by 1000
+
     for filename in files_names:
-        img = pd.read_csv(os.path.join(dir_path, filename), names=['label', 'x', 'y', 'h', 'w'], sep=' ')
-        df = df.append({'label': [1] * len(img.label), 'x': list(map(lambda x: float(x) * 1000, img.x)),
-                        'y': list(map(lambda x: float(x) * 1000, img.y)),
-                        'h': list(map(lambda x: float(x) * 1000, img.h)),
-                        'w': list(map(lambda x: float(x) * 1000, img.w)),
-                        'image_name': extract_image_name(filename)}, ignore_index=True)
+        image_name = extract_image_name(filename)
+        im = cv2.imread(os.path.join(dir_path, "images", image_name))
+        h, w, _ = im.shape
+        labels_info = pd.read_csv(os.path.join(dir_path, "labels", filename), names=['label', 'x', 'y', 'h', 'w'], sep=' ')
+        df = df.append({'label': [1] * len(labels_info.label), 'x': list(map(lambda x: float(x) * h, labels_info.x)),
+                        'y': list(map(lambda x: float(x) * w, labels_info.y)),
+                        'h': list(map(lambda x: float(x) * w, labels_info.h)),
+                        'w': list(map(lambda x: float(x) * h, labels_info.w)),
+                        'image_name': extract_image_name(image_name)}, ignore_index=True)
 
     df.to_csv(output_name, index=False)
     return df
@@ -81,7 +86,7 @@ def parse_data(dir_path, train_size, validation_size, output_path) -> None:
     :param train_size:
     :param dir_path: The directory path to the data folder
     """
-    file_list = os.listdir(dir_path)
+    file_list = os.listdir(os.path.join(dir_path, "labels"))
     random.shuffle(file_list)
 
     file_list_len = len(file_list)
@@ -89,8 +94,6 @@ def parse_data(dir_path, train_size, validation_size, output_path) -> None:
     validation = train + int(file_list_len * validation_size) + 1
 
     # EDA
-    save_eda(write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv")), "train_json")
-
     write_file(dir_path, file_list[:train], os.path.join(output_path, "train.csv"))
     write_file(dir_path, file_list[train:validation], os.path.join(output_path, "validation.csv"))
     write_file(dir_path, file_list[validation:], os.path.join(output_path, "test.csv"))
@@ -138,7 +141,7 @@ def main():
     if not os.path.isdir(DEFAULT_OUTPUT_FOLDER):
         os.mkdir(DEFAULT_OUTPUT_FOLDER)
 
-    parse_data(os.path.join(args.data_path, "labels"), args.train_size, args.validation_size,
+    parse_data(args.data_path, args.train_size, args.validation_size,
                DEFAULT_OUTPUT_FOLDER)
 
 

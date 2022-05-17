@@ -23,7 +23,7 @@ class SpyFishAotearoaDataset(torch.utils.data.Dataset):
         img_name = self.table.loc[idx].image_name
         img_path = os.path.join(self.imgs_path, img_name)
 
-        img = Image.open(img_path).convert("RGB")
+        img = Image.open(img_path)
 
         num_objs = len(self.table.loc[idx].x)
         boxes = []

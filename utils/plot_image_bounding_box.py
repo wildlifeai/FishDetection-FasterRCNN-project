@@ -17,7 +17,7 @@ def get_transform(train):  #TODO: remove when done with simulation
 
 
 def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2, text_size=0.5, text_th=1,
-                       color_box=(255, 255, 255)):
+                       color_box=(1, 1, 1)):
     """
     Returns the image with boxes and labels as PIL
     :param thresh:
@@ -31,8 +31,7 @@ def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2,
     :param color_box: Box and text color
     :return: Returns the image with boxes and labels as PIL
     """
-    img = img.numpy().T.swapaxes(0, 1)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.numpy().transpose(1, 2, 0)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     # turn classification tensors to numpy
@@ -57,14 +56,15 @@ def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2,
 if __name__ == '__main__':
     # TODO: remove when done with simulation
     dataset_test = SpyFishAotearoaDataset("../data/", "train.csv", get_transform(train=False))
+    k = 4
     data_loader_test = torch.utils.data.DataLoader(
-        dataset_test, batch_size=1, shuffle=False, collate_fn=collate_fn)
+        dataset_test, batch_size=20, shuffle=False, collate_fn=collate_fn)
     iterable = tqdm(data_loader_test, position=0, leave=True)
     for images, targets in iterable:
         images = list(image for image in images)
         targets = [{k: v for k, v in t.items()} for t in targets]
 
-        img = add_bounding_boxes(images[0], torch.Tensor([4]), torch.Tensor([0.8]),  targets[0]["boxes"])
+        img = add_bounding_boxes(images[k], torch.Tensor([4]*len(targets[k]["boxes"])), torch.Tensor([0.8]*len(targets[k]["boxes"])),  targets[k]["boxes"])
 
         plt.imshow(img)
         plt.xticks([])
