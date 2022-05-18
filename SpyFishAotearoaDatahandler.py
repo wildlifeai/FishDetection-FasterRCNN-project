@@ -28,12 +28,17 @@ def write_file(dir_path, files_names, output_name):
     for filename in files_names:
         image_name = extract_image_name(filename)
         im = cv2.imread(os.path.join(dir_path, "images", image_name))
-        h, w, _ = im.shape
+        height, width, _ = im.shape
         labels_info = pd.read_csv(os.path.join(dir_path, "labels", filename), names=['label', 'x', 'y', 'h', 'w'], sep=' ')
-        df = df.append({'label': [1] * len(labels_info.label), 'x': list(map(lambda x: float(x) * h, labels_info.x)),
-                        'y': list(map(lambda x: float(x) * w, labels_info.y)),
-                        'h': list(map(lambda x: float(x) * w, labels_info.h)),
-                        'w': list(map(lambda x: float(x) * h, labels_info.w)),
+
+        # The data is given in YOLO format therefore the x and y coordinates are in the middle
+        w = list(map(lambda x: float(x) * width, labels_info.w))
+        h = list(map(lambda x: float(x) * height, labels_info.h))
+        y = list(map(lambda x: float(x) * height, labels_info.y))
+        x = list(map(lambda x: float(x) * width, labels_info.x))
+        y = [val - w[i] / 2 for i, val in enumerate(y)]
+        x = [val - h[i] / 2 for i, val in enumerate(x)]
+        df = df.append({'label': [1] * len(labels_info.label), 'x': x, 'y': y, 'h': h, 'w': w,
                         'image_name': extract_image_name(image_name)}, ignore_index=True)
 
     df.to_csv(output_name, index=False)
