@@ -8,6 +8,8 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 COL_WIDTH = 0.3
+TRAIN_COL = 'g'
+TEST_COL = 'r'
 
 
 def dict_keys_to_np(keys):
@@ -27,9 +29,10 @@ def draw_bar_plot(x1, y1, title, x2=None, y2=None):
     :param title: Graph title
     """
     plt.title(title)
-    plt.bar(dict_keys_to_np(x1), y1, width=COL_WIDTH, color='g')
+    plt.bar(dict_keys_to_np(x1), y1, width=COL_WIDTH, color=TRAIN_COL, label="train set")
     if x2:
-        plt.bar(dict_keys_to_np(x2) + 1.5*COL_WIDTH, y2, width=COL_WIDTH, color='r')
+        plt.bar(dict_keys_to_np(x2) + 1.5*COL_WIDTH, y2, width=COL_WIDTH, color=TEST_COL, label="test set")
+        plt.legend()
     plt.show()
 
 
@@ -53,6 +56,30 @@ def get_areas(h_list, w_list) -> list:
     h_list = json.loads(h_list)
     w_list = json.loads(w_list)
     return [h * w for h, w in zip(h_list, w_list)]
+
+
+def null_or_dict_val(dic, key):
+    """
+    :param dic: dictionary or null
+    :param key: the key to search
+    :return: returns null if dict doesn't exist and value otherwise
+    """
+    if dic:
+        return dic[key]
+    return None
+
+
+def plot_line_dict(keys, values, color, label):
+    """
+    Plots a lineplot of keys vs values
+    :param label: Label for the function
+    :param color: line color
+    :param keys: Need to be numbers inside strings
+    :param values: Need to be numbers
+    """
+    x = dict_keys_to_np(keys)
+    plt.plot(x, values, color=color, label=label)
+    plt.xticks(np.arange(min(x), max(x) + 1, (max(x) - min(x)) // 5))
 
 
 def create_eda(csv_path, file_path):
@@ -94,24 +121,30 @@ def present_eda(eda_data_train, eda_data_test=None):
     with open(eda_data_train, 'r') as f:
         data_train = json.load(f)
 
+    # Load test data - if valid
     if eda_data_test:
         with open(eda_data_test, 'r') as f:
             data_test = json.load(f)
 
+
     # Present graphs
     # # Number of objects in an image
     draw_bar_plot(data_train["n_objects"].keys(), data_train["n_objects"].values(),
-                  "Number of objects in an image", data_train["n_objects"].keys(), data_train["n_objects"].values())
+                  "Number of objects in an image", null_or_dict_val(data_test, "n_objects").keys(),
+                  null_or_dict_val(data_test, "n_objects").values())
 
     # # Classes
-    draw_bar_plot(data_train["n_class"].keys(), data_train["n_class"].values(), "Classes Distribution")
+    draw_bar_plot(data_train["n_class"].keys(), data_train["n_class"].values(), "Classes Distribution",
+                  null_or_dict_val(data_test, "n_class").keys(),
+                  null_or_dict_val(data_test, "n_class").values())
 
     # # Size of boxes
-    x = [int(y) for y in list(data_train["box_area"].keys())]
-
     plt.title("Histogram of Box Area")
-    plt.plot(x, data_train["box_area"].values(), color='g')
-    plt.xticks(np.arange(min(x), max(x)+1, (max(x)-min(x))//5))
+    plot_line_dict(data_train["box_area"].keys(), data_train["box_area"].values(), TRAIN_COL, "train set")
+    if eda_data_test:
+        plot_line_dict(data_test["box_area"].keys(), np.array(list(data_test["box_area"].values()))+2,
+                       TEST_COL, "test set")
+        plt.legend()
     plt.show()
 
 
