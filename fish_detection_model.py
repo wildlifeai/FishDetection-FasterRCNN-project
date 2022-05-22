@@ -9,7 +9,7 @@ from SpyFishAotearoaDataset import SpyFishAotearoaDataset
 import utils.transformers as T
 from utils.general_utils import collate_fn
 from utils.plot_image_bounding_box import add_bounding_boxes
-from torchvision.ops import box_iou
+from torchvision.ops import box_iou, batched_nms
 
 LOG_TRAIN_FREQ = 10
 VALIDATION_IOU_LOG = False
@@ -139,7 +139,7 @@ class FishDetectionModel:
                 wandb.log({"classifications_images": [wandb.Image(image) for image in img_boxes]})
 
             if log_iou:
-                return batch_iou_sum, n_boxes  # TODO: avg not right
+                return batch_iou_sum, n_boxes
 
     def train_one_epoch(self, optimizer, data_loader, device, verbose=True):
         self.model.train()
@@ -164,6 +164,7 @@ class FishDetectionModel:
 
             # Logging train images to w&b after model prediction
             if i % LOG_TRAIN_FREQ == 0:
+                # TODO: log predictions and targets
                 self.log_to_wb(images, targets, log_img=True, log_iou=False)
 
         return avg_train_loss / len(data_loader.dataset)
@@ -172,7 +173,7 @@ class FishDetectionModel:
         # In order to get the validation loss we need to use .train()
         self.model.train()
         avg_iou = 0
-        boxes_num = 0  # How many boxes the model found, for calculating IOU
+        boxes_num = 0  # How many boxes the model found
         avg_val_loss = 0
 
         with torch.no_grad():
@@ -195,16 +196,24 @@ class FishDetectionModel:
 
         return avg_val_loss / len(val_set), 0 if img_log else avg_val_loss / len(val_set)
 
-    def predict(self, img_path, device, class_names, cls_thresh=0.5, iou_thresh=0.35):
+    def predict(self, img_path, device, class_names, cls_thresh=0.5, iou_thresh=0.4):
         self.model.eval()
         with torch.no_grad():
             img = Image.open(img_path)
             transform = T.Compose([T.ToTensor()])
             img = transform(img).to(device)
             pred = self.model([img])
-            pred_class = [class_names[i] for i in list(pred[0]['labels'].cpu().numpy())]
-            pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().cpu().numpy())]
-            pred_score = list(pred[0]['scores'].detach().cpu().numpy())
+
+            # TODO: check mns code using GPU
+            mns_ind = batched_nms(pred[0]['boxes'].detach().cpu(), pred[0]['scores'].detach().cpu(),
+                                  pred[0]['labels'].cpu(), iou_thresh)
+            labels_filtered = pred[0]['labels'].cpu()[mns_ind, :]
+            scores_filtered = pred[0]['scores'].detach().cpu()[mns_ind, :]
+            boxes_filtered = pred[0]['labels'].cpu()[mns_ind, :]
+
+            pred_class = [class_names[i] for i in list(labels_filtered.numpy())]
+            pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(boxes_filtered.numpy())]
+            pred_score = list(scores_filtered.numpy())
 
             pred_t = [pred_score.index(x) for x in pred_score if x > cls_thresh][-1]
 
