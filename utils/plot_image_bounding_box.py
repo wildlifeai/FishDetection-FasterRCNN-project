@@ -16,7 +16,7 @@ def get_transform(train):  #TODO: remove when done with simulation
     return T.Compose(transforms)
 
 
-def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2, text_size=0.5, text_th=1,
+def add_bounding_boxes(img, pred_cls, boxes, pred_score=None, thresh=0.35, rect_th=2, text_size=0.5, text_th=1,
                        color_box=(1, 1, 1)):
     """
     Returns the image with boxes and labels as PIL
@@ -45,8 +45,8 @@ def add_bounding_boxes(img, pred_cls, pred_score, boxes, thresh=0.35, rect_th=2,
                       (int(boxes[i][2]),
                        int(boxes[i][3])),
                       color=color_box, thickness=rect_th)
-        cv2.putText(img, "fish" + ":" + str(round(pred_score[i], 3)),
-                    (int(boxes[i][0]+ rect_th), int(boxes[i][1])+20),
+        cv2.putText(img, "fish" + ":" + '' if pred_score is None else str(round(pred_score[i], 3)),
+                    (int(boxes[i][0] + rect_th), int(boxes[i][1])+20),
                     cv2.FONT_HERSHEY_SIMPLEX, text_size, color_box, thickness=text_th)  # TODO: add real class label
 
     # turn to PIL
@@ -60,11 +60,11 @@ if __name__ == '__main__':
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test, batch_size=20, shuffle=False, collate_fn=collate_fn)
     iterable = tqdm(data_loader_test, position=0, leave=True)
-    for images, targets in iterable:
+    for images, targets, _ in iterable:
         images = list(image for image in images)
         targets = [{k: v for k, v in t.items()} for t in targets]
 
-        img = add_bounding_boxes(images[k], torch.Tensor([4]*len(targets[k]["boxes"])), torch.Tensor([0.8]*len(targets[k]["boxes"])),  targets[k]["boxes"])
+        img = add_bounding_boxes(images[k], torch.Tensor([4]*len(targets[k]["boxes"])),  targets[k]["boxes"])
 
         plt.imshow(img)
         plt.xticks([])

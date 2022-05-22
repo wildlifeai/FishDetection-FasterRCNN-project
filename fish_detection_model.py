@@ -125,7 +125,8 @@ class FishDetectionModel:
             for i, img in enumerate(images):
                 if log_img:
                     img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'].cpu(),
-                                                        results[i]['scores'].cpu(), results[i]['boxes'].cpu(),
+                                                        results[i]['boxes'].cpu(),
+                                                        pred_score=results[i]['scores'].cpu(),
                                                         thresh=0.20))
 
                 if log_iou:
@@ -144,7 +145,7 @@ class FishDetectionModel:
         self.model.train()
         avg_train_loss = 0
 
-        for i, (images, targets) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
+        for i, (images, targets, _) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
             images = list(image.to(device) for image in images)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -168,7 +169,6 @@ class FishDetectionModel:
         return avg_train_loss / len(data_loader.dataset)
 
     def evaluate(self, val_set, img_log, device, verbose=True):
-        # todo: check about to.device(CPU)
         # In order to get the validation loss we need to use .train()
         self.model.train()
         avg_iou = 0
@@ -179,7 +179,7 @@ class FishDetectionModel:
             if verbose:
                 print('\nStarting validation')
 
-            for images, targets in tqdm(val_set, position=0, leave=True) if verbose else val_set:
+            for images, targets, _ in tqdm(val_set, position=0, leave=True) if verbose else val_set:
                 images = list(image.to(device) for image in images)
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -212,5 +212,5 @@ class FishDetectionModel:
             pred_class = pred_class[:pred_t + 1]
             pred_score = pred_score[:pred_t + 1]
 
-            images = add_bounding_boxes(img, pred_class, pred_score, pred_boxes, thresh=iou_thresh)
+            images = add_bounding_boxes(img, pred_class, pred_boxes,pred_score, thresh=iou_thresh)
             return images, pred_boxes, pred_class, pred_score
