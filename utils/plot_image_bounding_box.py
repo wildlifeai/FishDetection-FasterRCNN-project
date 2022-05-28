@@ -36,10 +36,12 @@ def add_bounding_boxes(img, pred_cls, boxes, pred_score=None, thresh=0.35, rect_
 
     # turn classification tensors to numpy
     pred_cls = pred_cls.numpy() # TODO: When have more classes - add mapping from int class to string
-    pred_score = pred_score.numpy()
+
+    if pred_score is not None:
+        pred_score = pred_score.numpy()
 
     for i in range(len(boxes)):
-        if pred_score[i] < thresh:
+        if pred_score is not None and pred_score[i] < thresh:
             continue
         cv2.rectangle(img, (int(boxes[i][0]), int(boxes[i][1])),
                       (int(boxes[i][2]),

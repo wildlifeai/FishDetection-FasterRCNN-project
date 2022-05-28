@@ -65,7 +65,7 @@ def main():
         "-op",
         "--output_path",
         type=str,
-        default=".\\output",
+        default=".\\images_with_labels",
         help="A path to save the images with the boxes"
     )
 
@@ -73,12 +73,16 @@ def main():
         "-n",
         "--file_name",
         type=str,
-        default="trains.csv",
+        default="train.csv",
         help="The name of the csv file"
     )
 
     args = parser.parse_args()
-    print_images(args.path, args.file_name, args.should_save, args.output_path)
+
+    if args.save and not os.path.isdir(args.output_path):
+        os.makedirs(args.output_path)
+
+    print_images(args.path, args.file_name, args.save, args.output_path)
 
 
 if __name__ == '__main__':
