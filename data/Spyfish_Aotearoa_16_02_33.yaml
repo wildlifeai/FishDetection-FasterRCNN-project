@@ -1,0 +1,4 @@
+names: [snapper]
+nc: 1
+train: snapper_data/train.txt
+val: snapper_data/valid.txt
