@@ -11,6 +11,10 @@ WEIGHT_DECAY = 0.00149779494703967
 GAMMA = 0.4477536224970189
 LEARNING_RATE_SIZE = 4
 
+# For nesi -r remove when there's a solution
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -82,14 +86,14 @@ def main():
         "-o",
         "--output_path",
         type=str,
-        default=f".\\output\\faster-rcnn-model-{time.time()}",
+        default=f"./output/faster-rcnn-model-{time.time()}",
         help="Define an output path for the model")
 
     parser.add_argument(
         "-dp",
         "--data_path",
         type=str,
-        default='.\\data',
+        default='./data',
         help="A path to the data folder"
     )
 
@@ -103,8 +107,8 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.isdir('.\\output'):
-        os.mkdir(".\\output")
+    if not os.path.isdir('./output'):
+        os.mkdir("./output")
 
     model = FishDetectionModel(args)
     model.train()
