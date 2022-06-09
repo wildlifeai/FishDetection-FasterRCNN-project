@@ -47,7 +47,8 @@ def add_bounding_boxes(img, pred_cls, boxes, pred_score=None, thresh=0.35, rect_
                       (int(boxes[i][2]),
                        int(boxes[i][3])),
                       color=color_box, thickness=rect_th)
-        cv2.putText(img, "fish" + ":" + '' if pred_score is None else str(round(pred_score[i], 3)),
+        cv2.putText(img, f"fish{pred_cls[i]}" + ":" + '' if pred_score is None else str(round(pred_score[i],
+                                                                                            3)),
                     (int(boxes[i][0] + rect_th), int(boxes[i][1])+20),
                     cv2.FONT_HERSHEY_SIMPLEX, text_size, color_box, thickness=text_th)  # TODO: add real class label
 

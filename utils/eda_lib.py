@@ -6,10 +6,13 @@ import json
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+import matplotlib.ticker as mticker
 
-COL_WIDTH = 0.3
+
+COL_WIDTH = 0.15
 TRAIN_COL = 'g'
 TEST_COL = 'r'
+VAL_COL = 'b'
 
 
 def dict_keys_to_np(keys):
@@ -21,7 +24,7 @@ def dict_keys_to_np(keys):
     return np.array([int(y) for y in list(keys)])
 
 
-def draw_bar_plot(x1, y1, title, x2=None, y2=None):
+def draw_bar_plot(x1, y1, title, x2=None, y2=None, x3=None, y3=None):
     """
     Presents a bar plot
     :param x2: optional
@@ -31,8 +34,9 @@ def draw_bar_plot(x1, y1, title, x2=None, y2=None):
     plt.title(title)
     plt.bar(dict_keys_to_np(x1), y1, width=COL_WIDTH, color=TRAIN_COL, label="train set")
     if x2:
-        plt.bar(dict_keys_to_np(x2) + 1.5*COL_WIDTH, y2, width=COL_WIDTH, color=TEST_COL, label="test set")
+        plt.bar(dict_keys_to_np(x2) + 1*COL_WIDTH, y2, width=COL_WIDTH, color=TEST_COL, label="test set")
         plt.legend()
+    plt.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
     plt.show()
 
 
@@ -82,6 +86,16 @@ def plot_line_dict(keys, values, color, label):
     plt.xticks(np.arange(min(x), max(x) + 1, (max(x) - min(x)) // 5))
 
 
+def change_count_to_relative_dict(count_dict):
+    """
+    Changes count values to fraction values in a dictionary
+    :param total: Total values in dict
+    :param count_dict: Dictionary where the values are counters
+    """
+    total = sum(count_dict.values(), 0.0)
+    return {k: v / total for k, v in count_dict.items()}
+
+
 def create_eda(csv_path, file_path):
     """
     Read the csv file containing the information and saves the relevant information to a json object.
@@ -96,16 +110,18 @@ def create_eda(csv_path, file_path):
     # Number of objects in an image - aggregate by image-name
     lens = df.applymap(lambda x: len(x))["label"]
     eda["n_objects"] = lens.value_counts().to_dict()
+    eda["n_objects"] = change_count_to_relative_dict(eda["n_objects"])
 
     # Classes
     count_dict = {}
     df["label"] = df["label"].apply(lambda x: count_types(x, count_dict))
-    eda["n_class"] = count_dict
+    eda["n_class"] = change_count_to_relative_dict(count_dict)
 
     # Size of boxes
     areas = df[['h', 'w']].apply(lambda x: get_areas(x[0], x[1]), axis=1)
     areas = areas.explode().astype(int)
-    eda["box_area"] = areas.value_counts().to_dict()
+    eda["box_area"] = list(areas)
+
 
     # Save to file
     with open(f'{file_path}.json', 'w') as outfile:
@@ -139,15 +155,17 @@ def present_eda(eda_data_train, eda_data_test=None):
                   null_or_dict_val(data_test, "n_class").values())
 
     # # Size of boxes
+    plt.hist(x=data_train["box_area"], bins='auto', color=TRAIN_COL,
+             alpha=0.7, rwidth=0.85, label="train set")
+    plt.hist(x=data_test["box_area"], bins='auto', color=TEST_COL,
+             alpha=0.7, rwidth=0.85, label="test set")
     plt.title("Histogram of Box Area")
-    plot_line_dict(data_train["box_area"].keys(), data_train["box_area"].values(), TRAIN_COL, "train set")
-    if eda_data_test:
-        plot_line_dict(data_test["box_area"].keys(), np.array(list(data_test["box_area"].values()))+2,
-                       TEST_COL, "test set")
-        plt.legend()
+    plt.legend()
     plt.show()
 
 
 if __name__ == "__main__":
-    #create_eda("..\\data\\output\\train.csv", "..\\train_json")
-    present_eda("../train_json.json", "../train_json.json")
+    create_eda("..\\data\\output\\train.csv", "../eda_data/train_json")
+    create_eda("..\\data\\output\\validation.csv", "../eda_data/validation_json")
+    create_eda("..\\data\\output\\test.csv", "../eda_data/test_json")
+    present_eda("../eda_data/train_json.json", "../eda_data/test_json.json")
