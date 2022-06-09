@@ -10,8 +10,7 @@ venv.bak/
 
 # Libraries
 .idea/
+output/
 wandb/
 _pycache_/
 __pycache__/
-__pycache__/fish_detection_model.cpython-37.pyc
-__pycache__/SpyFishAotearoaDataset.cpython-37.pyc
