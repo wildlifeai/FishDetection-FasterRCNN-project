@@ -9,6 +9,13 @@ import matplotlib.pyplot as plt
 from utils.plot_image_bounding_box import add_bounding_boxes
 
 
+# todo: download the data and splitting it into train, validation and test
+# todo run the eta on each set of images
+# todo: check some of the images to make sure they are good
+# todo: change classes in the model
+# todo: check how to save our work in the computers
+# todo: clear and delete all the irrelevant files in weights and biases
+
 def print_images(img_path, file_name, should_save, output_path):
     """
 
