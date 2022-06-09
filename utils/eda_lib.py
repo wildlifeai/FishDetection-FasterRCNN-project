@@ -36,6 +36,10 @@ def draw_bar_plot(x1, y1, title, x2=None, y2=None, x3=None, y3=None):
     if x2:
         plt.bar(dict_keys_to_np(x2) + 1*COL_WIDTH, y2, width=COL_WIDTH, color=TEST_COL, label="test set")
         plt.legend()
+    if x3:
+        plt.bar(dict_keys_to_np(x3) + 2 * COL_WIDTH, y3, width=COL_WIDTH, color=VAL_COL, label="validation "
+                                                                                               "set")
+        plt.legend()
     plt.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
     plt.show()
 
@@ -71,19 +75,6 @@ def null_or_dict_val(dic, key):
     if dic:
         return dic[key]
     return None
-
-
-def plot_line_dict(keys, values, color, label):
-    """
-    Plots a lineplot of keys vs values
-    :param label: Label for the function
-    :param color: line color
-    :param keys: Need to be numbers inside strings
-    :param values: Need to be numbers
-    """
-    x = dict_keys_to_np(keys)
-    plt.plot(x, values, color=color, label=label)
-    plt.xticks(np.arange(min(x), max(x) + 1, (max(x) - min(x)) // 5))
 
 
 def change_count_to_relative_dict(count_dict):
@@ -122,15 +113,15 @@ def create_eda(csv_path, file_path):
     areas = areas.explode().astype(int)
     eda["box_area"] = list(areas)
 
-
     # Save to file
     with open(f'{file_path}.json', 'w') as outfile:
         json.dump(eda, outfile)
 
 
-def present_eda(eda_data_train, eda_data_test=None):
+def present_eda(eda_data_train, eda_data_test=None, eda_data_val=None):
     """
     Presents graphs that can explain the data.
+    :param eda_data_val: Optional.
     :param eda_data_test: Optional. If added the function will compare the eda data between train and test.
     :param eda_data_train: path to a json file that was created by create_eda
     """
@@ -142,23 +133,35 @@ def present_eda(eda_data_train, eda_data_test=None):
         with open(eda_data_test, 'r') as f:
             data_test = json.load(f)
 
+    # Load validation data - if valid
+    if eda_data_test:
+        with open(eda_data_val, 'r') as f:
+            data_val = json.load(f)
+
 
     # Present graphs
     # # Number of objects in an image
     draw_bar_plot(data_train["n_objects"].keys(), data_train["n_objects"].values(),
                   "Number of objects in an image", null_or_dict_val(data_test, "n_objects").keys(),
-                  null_or_dict_val(data_test, "n_objects").values())
+                  null_or_dict_val(data_test, "n_objects").values(),
+                  null_or_dict_val(data_val, "n_objects").keys(),
+                  null_or_dict_val(data_val, "n_objects").values())
 
     # # Classes
     draw_bar_plot(data_train["n_class"].keys(), data_train["n_class"].values(), "Classes Distribution",
                   null_or_dict_val(data_test, "n_class").keys(),
-                  null_or_dict_val(data_test, "n_class").values())
+                  null_or_dict_val(data_test, "n_class").values(),
+                  null_or_dict_val(data_val, "n_class").keys(),
+                  null_or_dict_val(data_val, "n_class").values()
+                  )
 
     # # Size of boxes
     plt.hist(x=data_train["box_area"], bins='auto', color=TRAIN_COL,
              alpha=0.7, rwidth=0.85, label="train set")
     plt.hist(x=data_test["box_area"], bins='auto', color=TEST_COL,
              alpha=0.7, rwidth=0.85, label="test set")
+    plt.hist(x=data_val["box_area"], bins='auto', color=VAL_COL,
+             alpha=0.7, rwidth=0.85, label="validation set")
     plt.title("Histogram of Box Area")
     plt.legend()
     plt.show()
@@ -168,4 +171,5 @@ if __name__ == "__main__":
     create_eda("..\\data\\output\\train.csv", "../eda_data/train_json")
     create_eda("..\\data\\output\\validation.csv", "../eda_data/validation_json")
     create_eda("..\\data\\output\\test.csv", "../eda_data/test_json")
-    present_eda("../eda_data/train_json.json", "../eda_data/test_json.json")
+    present_eda("../eda_data/train_json.json", "../eda_data/test_json.json",
+                "../eda_data/validation_json.json")
