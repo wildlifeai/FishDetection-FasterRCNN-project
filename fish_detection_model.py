@@ -1,3 +1,4 @@
+import cv2
 from PIL.Image import Image
 import wandb
 import torchvision
@@ -9,12 +10,13 @@ from SpyFishAotearoaDataset import SpyFishAotearoaDataset
 import utils.transformers as T
 from utils.general_utils import collate_fn, apply_mns, get_transform
 from utils.plot_image_bounding_box import add_bounding_boxes
+
 # from torchvision.ops import box_iou
 
-LOG_TRAIN_FREQUENCY = 29
+LOG_TRAIN_FREQUENCY = 1
 NMS_THRESHOLD = 0.3
-SAVE_MODEL_FREQUENCY = 49
-SHOULD_SAVE_MODEL = 300
+SAVE_MODEL_FREQUENCY = 3
+SHOULD_SAVE_MODEL = 1
 VALIDATION_IOU_LOG = False
 
 
@@ -110,7 +112,7 @@ class FishDetectionModel:
         :param log_iou:  Boolean indicate whether to log the IOU data
         :return: batch IOU sum and number of boxes if log_iou is true else None
         """
-        #todo limit the number of images
+        # todo limit the number of images
         with torch.no_grad():
             img_boxes = []
             # batch_iou_sum = 0
@@ -118,6 +120,7 @@ class FishDetectionModel:
 
             self.model.eval()
             results = self.model(images)
+            all_images = []
 
             for i, img in enumerate(images):
                 results[i] = {
@@ -129,17 +132,25 @@ class FishDetectionModel:
                 results[i] = apply_mns(results[i], NMS_THRESHOLD)
 
                 # Adding bounding boxes of the prediction
-                images_to_log = add_bounding_boxes(img.cpu(), results[i]['labels'],
-                                                   results[i]['boxes'],
-                                                   pred_score=results[i]['scores'],
-                                                   color_box=(1, 1, 1),
-                                                   thresh=0.20)
+                image_to_log = img.cpu().numpy().transpose(1, 2, 0)
+                image_to_log = cv2.cvtColor(image_to_log, cv2.COLOR_BGR2RGB)
+
+                image_to_log = add_bounding_boxes(image_to_log, results[i]['labels'],
+                                                  results[i]['boxes'],
+                                                  pred_score=results[i]['scores'],
+                                                  color_box=(1, 1, 1),
+                                                  thresh=0.20,
+                                                  return_pil=False
+                                                  )
 
                 # Adding bounding box of the real targets
-                images_to_log = add_bounding_boxes(images_to_log, targets[i]['labels'],
-                                                   targets[i]['boxes'],
-                                                   color_box=(0, 0, 0),  # todo: is it good number?
-                                                   thresh=0.20)
+                image_to_log = add_bounding_boxes(image_to_log, targets[i]['labels'].cpu(),
+                                                  targets[i]['boxes'].cpu(),
+                                                  color_box=(0, 0, 0),  # todo: is it good number?
+                                                  thresh=0.20
+                                                  )
+
+                all_images.append(image_to_log)
 
             # if log_iou:
             #     batch_iou_sum += box_iou(targets[i]["boxes"].cpu(), results[i]["boxes"].cpu())
@@ -147,7 +158,7 @@ class FishDetectionModel:
 
             self.model.train()
 
-            wandb.log({"classifications_images": [wandb.Image(image) for image in images_to_log]})
+            wandb.log({"classifications_images": [wandb.Image(image) for image in all_images]})
 
             # if log_iou:
             #     return batch_iou_sum, n_boxes

@@ -1,5 +1,6 @@
 import argparse
 import os
+import cv2
 from SpyFishAotearoaDataset import SpyFishAotearoaDataset
 import utils.transformers as T
 from utils.general_utils import collate_fn
@@ -9,6 +10,7 @@ import matplotlib.pyplot as plt
 from utils.plot_image_bounding_box import add_bounding_boxes
 
 
+# todo: fix this class
 # todo: download the data and splitting it into train, validation and test
 # todo run the eta on each set of images
 # todo: check some of the images to make sure they are good
@@ -39,7 +41,11 @@ def print_images(img_path, file_name, should_save, output_path):
 
         classes = torch.Tensor([0] * num_boxes)  # todo:change once we finish the classes
 
-        img = add_bounding_boxes(images[0], classes, targets[0]["boxes"])
+        log_images = images[0]
+        log_images = log_images.cpu().numpy().transpose(1, 2, 0)
+        log_images = cv2.cvtColor(log_images, cv2.COLOR_BGR2RGB)
+
+        img = add_bounding_boxes(log_images, classes, targets[0]["boxes"])
 
         if should_save:
             image_name = dataset.get_image_name(index)
