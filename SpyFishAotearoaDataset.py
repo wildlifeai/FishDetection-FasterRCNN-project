@@ -19,6 +19,9 @@ class SpyFishAotearoaDataset(torch.utils.data.Dataset):
         })
         self.imgs_path = os.path.join(root_dir, "images")
 
+    def get_image_name(self, idx):
+        return self.table.loc[idx].image_name
+
     def __getitem__(self, idx):
         img_name = self.table.loc[idx].image_name
         img_path = os.path.join(self.imgs_path, img_name)
@@ -47,7 +50,7 @@ class SpyFishAotearoaDataset(torch.utils.data.Dataset):
         if self.transforms is not None:
             img, target = self.transforms(img, target)
 
-        return img, target
+        return img, target, idx
 
     def __len__(self):
         return len(self.table)

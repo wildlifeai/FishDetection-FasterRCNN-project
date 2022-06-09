@@ -75,8 +75,9 @@ class FishDetectionModel:
         verbose = self.args.verbose
 
         params = [p for p in self.model.parameters() if p.requires_grad]
-        optimizer = torch.optim.SGD(params, lr=self.args.learning_rate, momentum=self.args.momentum,
-                                    weight_decay=self.args.weight_decay)
+
+        optimizer = torch.optim.Adam(params, lr=self.args.learning_rate, weight_decay=self.args.weight_decay,
+                                     betas=(0.09, 0.999))
 
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.learning_rate_size,
                                                        gamma=self.args.gamma)
@@ -105,6 +106,21 @@ class FishDetectionModel:
             # Saving the model in the specified path
             torch.save(self.model, self.args.output_path)
 
+
+    def _apply_mns(self, results, iou_thresh):
+        """
+        Returns the tensors after applying mns on the boxes and classifications.
+        :param results: results\targets object
+        """
+        mns_ind = batched_nms(results['boxes'], results['scores'],
+                              results['labels'], iou_thresh)
+        labels_filtered = results['labels'][mns_ind]
+        scores_filtered = results['scores'][mns_ind]
+        boxes_filtered = results['boxes'][mns_ind]
+
+        return {'boxes': boxes_filtered, 'labels': labels_filtered, 'scores': scores_filtered}
+
+
     def log_to_wb(self, images, targets, log_img=True, log_iou=True):
         """
         Logging predicted images and IOU to weights and biases
@@ -124,8 +140,17 @@ class FishDetectionModel:
 
             for i, img in enumerate(images):
                 if log_img:
-                    img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'].cpu(),
-                                                        results[i]['scores'].cpu(), results[i]['boxes'].cpu(),
+                    results[i] = {
+                        'labels': results[i]['labels'].cpu(),
+                        'boxes': results[i]['boxes'].cpu(),
+                        'scores': results[i]['scores'].cpu()
+                    }
+
+                    results[i] = self._apply_mns(results[i], 0.3)
+
+                    img_boxes.append(add_bounding_boxes(img.cpu(), results[i]['labels'],
+                                                        results[i]['boxes'],
+                                                        pred_score=results[i]['scores'],
                                                         thresh=0.20))
 
                 if log_iou:
@@ -144,7 +169,7 @@ class FishDetectionModel:
         self.model.train()
         avg_train_loss = 0
 
-        for i, (images, targets) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
+        for i, (images, targets, _) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
             images = list(image.to(device) for image in images)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -179,7 +204,7 @@ class FishDetectionModel:
             if verbose:
                 print('\nStarting validation')
 
-            for images, targets in tqdm(val_set, position=0, leave=True) if verbose else val_set:
+            for images, targets, _ in tqdm(val_set, position=0, leave=True) if verbose else val_set:
                 images = list(image.to(device) for image in images)
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -204,11 +229,15 @@ class FishDetectionModel:
             pred = self.model([img])
 
             # TODO: check mns code using GPU
-            mns_ind = batched_nms(pred[0]['boxes'].detach().cpu(), pred[0]['scores'].detach().cpu(),
-                                  pred[0]['labels'].cpu(), iou_thresh)
-            labels_filtered = pred[0]['labels'].cpu()[mns_ind, :]
-            scores_filtered = pred[0]['scores'].detach().cpu()[mns_ind, :]
-            boxes_filtered = pred[0]['labels'].cpu()[mns_ind, :]
+            pred = {
+                'boxes': pred[0]['boxes'].detach().cpu(),
+                'labels': pred[0]['labels'].cpu(),
+                'scores': pred[0]['scores'].detach().cpu()
+            }
+
+            labels_filtered = pred['labels']
+            scores_filtered = pred['scores']
+            boxes_filtered = pred['labels']
 
             pred_class = [class_names[i] for i in list(labels_filtered.numpy())]
             pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(boxes_filtered.numpy())]
@@ -220,5 +249,5 @@ class FishDetectionModel:
             pred_class = pred_class[:pred_t + 1]
             pred_score = pred_score[:pred_t + 1]
 
-            images = add_bounding_boxes(img, pred_class, pred_score, pred_boxes, thresh=iou_thresh)
+            images = add_bounding_boxes(img, pred_class, pred_boxes,pred_score, thresh=iou_thresh)
             return images, pred_boxes, pred_class, pred_score

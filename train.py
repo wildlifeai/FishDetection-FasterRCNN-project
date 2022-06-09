@@ -3,8 +3,8 @@ import argparse
 import time
 from fish_detection_model import FishDetectionModel
 
-LEARNING_RATE = 0.001
-EPOCHS = 5
+LEARNING_RATE = 1e-5
+EPOCHS = 50
 BATCH_SIZE = 2
 MOMENTUM = 0.0435
 WEIGHT_DECAY = 0.00149779494703967
