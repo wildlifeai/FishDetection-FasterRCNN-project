@@ -10,13 +10,7 @@ import matplotlib.pyplot as plt
 from utils.plot_image_bounding_box import add_bounding_boxes
 
 
-# todo: fix this class
-# todo: download the data and splitting it into train, validation and test
-# todo run the eta on each set of images
-# todo: check some of the images to make sure they are good
-# todo: change classes in the model
 # todo: check how to save our work in the computers
-# todo: clear and delete all the irrelevant files in weights and biases
 
 def print_images(img_path, file_name, should_save, output_path):
     """
@@ -48,8 +42,8 @@ def print_images(img_path, file_name, should_save, output_path):
         img = add_bounding_boxes(log_images, classes, targets[0]["boxes"])
 
         if should_save:
-            image_name = dataset.get_image_name(index)
-            img.save(os.path.join(output_path, image_name, "_boxes"))
+            image_name = dataset.get_image_name(index).split(".jpg")[0]
+            img.save(os.path.join(output_path, image_name + "_with_labels.jpg"))
         else:
             plt.imshow(img)
             plt.xticks([])
@@ -71,7 +65,7 @@ def main():
         "-s",
         "--save",
         type=str,
-        default=False,
+        default=True,
         help="A boolean indicate if to save the files")
 
     parser.add_argument(

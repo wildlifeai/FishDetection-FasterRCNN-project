@@ -13,10 +13,10 @@ from utils.plot_image_bounding_box import add_bounding_boxes
 
 # from torchvision.ops import box_iou
 
-LOG_TRAIN_FREQUENCY = 1
+LOG_FREQUENCY = 20
 NMS_THRESHOLD = 0.3
-SAVE_MODEL_FREQUENCY = 3
-SHOULD_SAVE_MODEL = 1
+SAVE_MODEL_FREQUENCY = 50
+SHOULD_SAVE_MODEL = 300
 VALIDATION_IOU_LOG = False
 
 
@@ -51,7 +51,7 @@ class FishDetectionModel:
 
         # create a model if it doesn't have path
         if self.model is None:
-            self.model = self.build_model(2, False)
+            self.model = self.build_model(5, False)
 
         # Creating data loaders
         dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
@@ -61,7 +61,7 @@ class FishDetectionModel:
             dataset, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
 
         data_loader_test = torch.utils.data.DataLoader(
-            dataset_test, batch_size=1, shuffle=False, collate_fn=collate_fn)
+            dataset_test, batch_size=32, shuffle=False, collate_fn=collate_fn)
 
         self.model.to(device)
         verbose = self.args.verbose
@@ -76,7 +76,7 @@ class FishDetectionModel:
 
         with wandb.init(config=vars(self.args)):
             for epoch in range(self.args.epochs):
-                should_log = epoch % LOG_TRAIN_FREQUENCY == 0
+                should_log = epoch + 1 % LOG_FREQUENCY == 0
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
                 avg_train_loss = self.train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
@@ -104,15 +104,15 @@ class FishDetectionModel:
             model_name = time.strftime("%Y%m%d-%H%M%S")
             torch.save(self.model, self.args.output_path + model_name)
 
-    def log_to_wb(self, images, targets, log_iou=True):
+    def log_to_wb(self, images, targets, limit=10, log_iou=True):
         """
         Logging predicted images and IOU to weights and biases
+        :param limit: The maximum number of images to upload
         :param images: The images themselves
         :param targets: The real results of the images
         :param log_iou:  Boolean indicate whether to log the IOU data
         :return: batch IOU sum and number of boxes if log_iou is true else None
         """
-        # todo limit the number of images
         with torch.no_grad():
             img_boxes = []
             # batch_iou_sum = 0
@@ -123,6 +123,9 @@ class FishDetectionModel:
             all_images = []
 
             for i, img in enumerate(images):
+                if i >= limit:
+                    break
+
                 results[i] = {
                     'labels': results[i]['labels'].cpu(),
                     'boxes': results[i]['boxes'].cpu(),
@@ -139,7 +142,7 @@ class FishDetectionModel:
                                                   results[i]['boxes'],
                                                   pred_score=results[i]['scores'],
                                                   color_box=(1, 1, 1),
-                                                  thresh=0.20,
+                                                  thresh=0.001,
                                                   return_pil=False
                                                   )
 
@@ -147,7 +150,7 @@ class FishDetectionModel:
                 image_to_log = add_bounding_boxes(image_to_log, targets[i]['labels'].cpu(),
                                                   targets[i]['boxes'].cpu(),
                                                   color_box=(0, 0, 0),  # todo: is it good number?
-                                                  thresh=0.20
+                                                  thresh=0.001
                                                   )
 
                 all_images.append(image_to_log)
