@@ -73,7 +73,7 @@ def main():
         "--load_model",
         type=str,
         default=None,
-        help="Load the model from a path")
+        help="the path of the trained model")
 
     parser.add_argument(
         "-mt",
