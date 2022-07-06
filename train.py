@@ -4,16 +4,16 @@ import time
 from fish_detection_model import FishDetectionModel
 
 LEARNING_RATE = 1e-5
-EPOCHS = 1000
-BATCH_SIZE = 128
+EPOCHS = 20
+BATCH_SIZE = 64
 MOMENTUM = 0.0435
 WEIGHT_DECAY = 0
 GAMMA = 0.1
 LEARNING_RATE_SIZE = 4
 
 # For nesi -r remove when there's a solution
-# import ssl
-# ssl._create_default_https_context = ssl._create_unverified_context
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def main():

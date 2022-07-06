@@ -1,6 +1,5 @@
 import os
 import argparse
-import torch
 from fish_detection_model import FishDetectionModel
 
 def main():

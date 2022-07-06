@@ -12,11 +12,11 @@ from utils.general_utils import collate_fn, apply_mns, get_transform
 from utils.plot_image_bounding_box import add_bounding_boxes
 from torchvision.ops import box_iou
 
-LOG_FREQUENCY = 20
+LOG_FREQUENCY = 5
 NMS_THRESHOLD = 0.3
 TEST_BATCH_SIZE = 32
-SAVE_MODEL_FREQUENCY = 50
-SHOULD_SAVE_MODEL = 300
+SAVE_MODEL_FREQUENCY = 5
+SHOULD_SAVE_MODEL = 5
 VALIDATION_IOU_LOG = False
 
 
@@ -80,9 +80,9 @@ class FishDetectionModel:
 
         with wandb.init(config=vars(self.args)):
             for epoch in range(self.args.epochs):
-                should_log = epoch + 1 % LOG_FREQUENCY == 0
+                should_log = (epoch + 1) % LOG_FREQUENCY == 0
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
-                avg_train_loss = self.train_one_epoch(optimizer, data_loader, device, verbose)
+                avg_train_loss = self._train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
                 avg_val_loss, _ = self._evaluate(data_loader_test, should_log, device, verbose)
 
@@ -170,7 +170,7 @@ class FishDetectionModel:
             # if log_iou:
             #     return batch_iou_sum, n_boxes
 
-    def train_one_epoch(self, optimizer, data_loader, device, verbose=True):
+    def _train_one_epoch(self, optimizer, data_loader, device, verbose=True):
         self.model.train()
         avg_train_loss = 0
 
@@ -190,10 +190,6 @@ class FishDetectionModel:
             losses.backward()
             # Update model parameters from gradients: param -= learning_rate * param.grad
             optimizer.step()
-
-            # # Logging train images to w&b after model prediction
-            # if i % LOG_TRAIN_FREQ == 0:
-            #     self.log_to_wb(images, targets, log_img=True, log_iou=False)
 
         return avg_train_loss / len(data_loader.dataset)
 
@@ -222,6 +218,7 @@ class FishDetectionModel:
                 #     avg_iou += iou_results[0].sum()
                 #     boxes_num += iou_results[1]
                 if img_log:
+                    print("Logging images to weights and biases")
                     self.log_to_wb(images, targets, img_log)
 
         total_val_loss = avg_val_loss / len(val_set)

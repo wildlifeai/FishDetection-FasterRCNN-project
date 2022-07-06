@@ -2,7 +2,6 @@
 Function to generate and read EDA data on the data given to us
 """
 import json
-
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -168,8 +167,8 @@ def present_eda(eda_data_train, eda_data_test=None, eda_data_val=None):
 
 
 if __name__ == "__main__":
-    create_eda("..\\data\\output\\train.csv", "../eda_data/train_json")
-    create_eda("..\\data\\output\\validation.csv", "../eda_data/validation_json")
-    create_eda("..\\data\\output\\test.csv", "../eda_data/test_json")
-    present_eda("../eda_data/train_json.json", "../eda_data/test_json.json",
-                "../eda_data/validation_json.json")
+    create_eda("..\\data\\output\\train.csv", "../eda_data/train_eda")
+    create_eda("..\\data\\output\\validation.csv", "../eda_data/validation_eda")
+    create_eda("..\\data\\output\\test.csv", "../eda_data/test_eda")
+    present_eda("../eda_data/train_eda.json", "../eda_data/test_eda.json",
+                "../eda_data/validation_eda.json")
