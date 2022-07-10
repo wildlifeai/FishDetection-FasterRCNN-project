@@ -4,19 +4,19 @@ import wandb
 import torchvision
 import torch
 import time
-from PIL import Image
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from tqdm import tqdm
 from SpyFishAotearoaDataset import SpyFishAotearoaDataset
 from utils.general_utils import collate_fn, apply_mns, get_transform
 from utils.plot_image_bounding_box import add_bounding_boxes
 from torchvision.ops import box_iou
+from random import randint
 
-LOG_FREQUENCY = 5
+LOG_FREQUENCY = 1
 NMS_THRESHOLD = 0.3
-TEST_BATCH_SIZE = 32
-SAVE_MODEL_FREQUENCY = 5
-SHOULD_SAVE_MODEL = 5
+TEST_BATCH_SIZE = 2
+SAVE_MODEL_FREQUENCY = 1
+SHOULD_SAVE_MODEL = 1
 VALIDATION_IOU_LOG = False
 
 
@@ -82,9 +82,9 @@ class FishDetectionModel:
             for epoch in range(self.args.epochs):
                 should_log = (epoch + 1) % LOG_FREQUENCY == 0
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
-                avg_train_loss = self._train_one_epoch(optimizer, data_loader, device, verbose)
+                avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness = self._train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
-                avg_val_loss, _ = self._evaluate(data_loader_test, should_log, device, verbose)
+                avg_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg = self._evaluate(data_loader_test, should_log, device, verbose)
 
                 if verbose:
                     print('\nLosses of epoch num {} are:'.format(epoch + 1))
@@ -97,7 +97,15 @@ class FishDetectionModel:
                 #     wandb.log({"epoch": epoch + 1, "train_loss": avg_train_loss, "validation_loss": avg_val_loss,
                 #                'iou_average': avg_iou})
                 # else:
-                wandb.log({"epoch": epoch + 1, "train_loss": avg_train_loss, "validation_loss": avg_val_loss})
+                wandb.log({"epoch": epoch + 1, "total_train_loss": avg_train_loss,
+                           "total_validation_loss": avg_val_loss,
+                           "avg_train_classifier": avg_train_classifier,
+                           "avg_train_rpn_box_reg": avg_train_rpn_box_reg,
+                           "avg_train_objectness": avg_train_objectness,
+                           "avg_val_classifier": avg_val_classifier,
+                           "avg_val_objectness": avg_val_objectness,
+                           "avg_val_rpn_box_reg": avg_val_rpn_box_reg
+                           })
 
                 if epoch + 1 >= SHOULD_SAVE_MODEL and epoch % SAVE_MODEL_FREQUENCY == 0:
                     model_name = time.strftime("%Y%m%d-%H%M%S")
@@ -108,9 +116,10 @@ class FishDetectionModel:
             model_name = time.strftime("%Y%m%d-%H%M%S")
             torch.save(self.model, self.args.output_path + model_name)
 
-    def log_to_wb(self, images, targets, limit=10, log_iou=True):
+    def log_to_wb(self, images, targets, limit=10, train=False, log_iou=True):
         """
         Logging predicted images and IOU to weights and biases
+        :param train: If the log is connected to the train
         :param limit: The maximum number of images to upload
         :param images: The images themselves
         :param targets: The real results of the images
@@ -165,7 +174,8 @@ class FishDetectionModel:
 
             self.model.train()
 
-            wandb.log({"classifications_images": [wandb.Image(image) for image in all_images]})
+            log = "classifications_images_train_set" if train else "classifications_images_validation_set"
+            wandb.log({log: [wandb.Image(image) for image in all_images]})
 
             # if log_iou:
             #     return batch_iou_sum, n_boxes
@@ -173,6 +183,12 @@ class FishDetectionModel:
     def _train_one_epoch(self, optimizer, data_loader, device, verbose=True):
         self.model.train()
         avg_train_loss = 0
+        avg_train_classifier = 0
+        avg_train_objectness = 0
+        avg_train_rpn_box_reg = 0
+
+        num_batch = randint(0, len(data_loader))
+        num_image = randint(0, data_loader.batch_size)
 
         for i, (images, targets, _) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
             images = list(image.to(device) for image in images)
@@ -182,7 +198,17 @@ class FishDetectionModel:
             loss_dict = self.model(images, targets)
 
             losses = sum(loss for loss in loss_dict.values())
-            avg_train_loss += losses.item()
+            avg_train_loss += losses.cpu().item()
+
+            with torch.no_grad():
+                avg_train_classifier += loss_dict['loss_classifier'].cpu().item()
+                avg_train_objectness += loss_dict['loss_objectness'].cpu().item()
+                avg_train_rpn_box_reg += loss_dict['loss_rpn_box_reg'].cpu().item()
+
+                img_log = i == num_batch
+                if img_log:
+                    print("Logging train image to weights and biases")
+                    self.log_to_wb(images[num_image:num_image+1], targets[num_image:num_image+1], train=True)
 
             # Zero any old/existing gradients on the model's parameters
             optimizer.zero_grad()
@@ -191,7 +217,12 @@ class FishDetectionModel:
             # Update model parameters from gradients: param -= learning_rate * param.grad
             optimizer.step()
 
-        return avg_train_loss / len(data_loader.dataset)
+        avg_train_loss /= len(data_loader.dataset)
+        avg_train_objectness /= len(data_loader.dataset)
+        avg_train_rpn_box_reg /= len(data_loader.dataset)
+        avg_train_classifier /= len(data_loader.dataset)
+
+        return avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness
 
     def _evaluate(self, val_set, img_log, device, verbose=True):
         # In order to get the validation loss we need to use .train()
@@ -199,6 +230,9 @@ class FishDetectionModel:
         # avg_iou = 0
         # boxes_num = 0  # How many boxes the model found
         avg_val_loss = 0
+        avg_val_classifier = 0
+        avg_val_objectness = 0
+        avg_val_rpn_box_reg = 0
 
         with torch.no_grad():
             if verbose:
@@ -208,22 +242,30 @@ class FishDetectionModel:
                 images = list(image.to(device) for image in images)
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
+                torch.cuda.empty_cache()
                 loss_dict = self.model(images, targets)
 
                 losses = sum(loss for loss in loss_dict.values())
-                avg_val_loss += losses.item()
+                avg_val_loss += losses.cpu().item()
+
+                avg_val_classifier += loss_dict['loss_classifier'].cpu().item()
+                avg_val_objectness += loss_dict['loss_objectness'].cpu().item()
+                avg_val_rpn_box_reg += loss_dict['loss_rpn_box_reg'].cpu().item()
 
                 # if VALIDATION_IOU_LOG:
                 #     iou_results = self.log_to_wb(images, targets, img_log)
                 #     avg_iou += iou_results[0].sum()
                 #     boxes_num += iou_results[1]
                 if img_log:
-                    print("Logging images to weights and biases")
+                    print("Logging validation images to weights and biases")
                     self.log_to_wb(images, targets, img_log)
 
         total_val_loss = avg_val_loss / len(val_set)
+        avg_val_classifier /= len(val_set.dataset)
+        avg_val_objectness /= len(val_set.dataset)
+        avg_val_rpn_box_reg /= len(val_set.dataset)
 
-        return total_val_loss, 0 if img_log else total_val_loss
+        return total_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg
 
     def test(self, img_path, csv_path, output_path, class_names, cls_thresh=0.5, iou_thresh=0.4):
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
