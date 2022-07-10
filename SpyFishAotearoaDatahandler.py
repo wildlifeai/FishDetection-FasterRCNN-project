@@ -5,8 +5,8 @@ import pandas as pd
 import cv2
 
 DEFAULT_OUTPUT_FOLDER = ".\\data\\output"
-DEFAULT_TRAINING_SIZE = 0.7
-DEFAULT_VALIDATION_SIZE = 0.2
+DEFAULT_TRAINING_SIZE = 0.8
+DEFAULT_VALIDATION_SIZE = 0.1
 
 
 def extract_image_name(label_file_name) -> str:
