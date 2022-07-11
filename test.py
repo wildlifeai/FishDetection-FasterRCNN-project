@@ -2,6 +2,7 @@ import os
 import argparse
 from fish_detection_model import FishDetectionModel
 
+
 def main():
     parser = argparse.ArgumentParser()
 

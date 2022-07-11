@@ -4,7 +4,7 @@ import time
 from fish_detection_model import FishDetectionModel
 
 LEARNING_RATE = 1e-5
-EPOCHS = 1
+EPOCHS = 10
 BATCH_SIZE = 2
 MOMENTUM = 0.0435
 WEIGHT_DECAY = 0

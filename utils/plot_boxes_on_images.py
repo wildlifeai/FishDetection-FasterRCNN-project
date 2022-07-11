@@ -58,7 +58,7 @@ def main():
         "-p",
         "--path",
         type=str,
-        default="",
+        default="..\\data",
         help="path of the images to print")
 
     parser.add_argument(
