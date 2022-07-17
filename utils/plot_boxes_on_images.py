@@ -80,7 +80,7 @@ def main():
         "-n",
         "--file_name",
         type=str,
-        default="train.csv",
+        default="validation.csv",
         help="The name of the csv file"
     )
 

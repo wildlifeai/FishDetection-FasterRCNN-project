@@ -1,5 +1,6 @@
 from torchvision.ops import batched_nms
 import utils.transformers as T
+import albumentations as A
 
 
 def collate_fn(batch):
@@ -33,5 +34,8 @@ def get_transform(train):
     """
     transforms = [T.ToTensor()]
     if train:
-        transforms.append(T.RandomHorizontalFlip(0.5))
+        return A.Compose([
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(p=0.2),
+        ], bbox_params=A.BboxParams(format='pascal_voc'))
     return T.Compose(transforms)

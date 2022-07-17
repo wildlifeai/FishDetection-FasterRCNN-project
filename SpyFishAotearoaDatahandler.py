@@ -37,6 +37,7 @@ def write_file(dir_path, files_names, output_name):
         y2 = [int((val * height) + ((w[i] / 2) * height)) for i, val in enumerate(y)]
         df = df.append({'label': label, 'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2,
                         'image_name': extract_image_name(image_name)}, ignore_index=True)
+        df = df.drop(columns=['x', 'y', 'w', 'h'])
 
     df.to_csv(output_name, index=False)
     return df
