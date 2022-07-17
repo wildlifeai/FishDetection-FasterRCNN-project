@@ -1,4 +1,5 @@
 import random
+from torch import fliplr
 from torchvision.transforms import functional as F
 
 
@@ -13,8 +14,30 @@ class RandomHorizontalFlip(object):
             bbox = target["boxes"]
             bbox[:, [0, 2]] = width - bbox[:, [2, 0]]
             target["boxes"] = bbox
-            if "masks" in target:
-                target["masks"] = target["masks"].flip(-1)
+        return image, target
+
+
+class RandomVerticalFlip(object):
+    def __init__(self, prob):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            height, width = image.shape[-2:]
+            image = fliplr(image)
+            bbox = target["boxes"]
+            bbox[:, [1, 3]] = height - bbox[:, [3, 1]]
+            target["boxes"] = bbox
+        return image, target
+
+
+class RandomGrayScale(object):
+    def __init__(self, prob):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            image = F.rgb_to_grayscale(image, 3)
         return image, target
 
 
