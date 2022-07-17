@@ -52,10 +52,6 @@ class FishDetectionModel:
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         print(f"using {device} as device")
 
-        # create a model if it doesn't have path
-        if self.model is None:
-            self.model = self.build_model(5, False)
-
         # Creating data loaders
         dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
         dataset_test = SpyFishAotearoaDataset(self.args.data_path, "validation.csv", get_transform(train=False))
@@ -66,7 +62,10 @@ class FishDetectionModel:
         data_loader_test = torch.utils.data.DataLoader(
             dataset_test, batch_size=TEST_BATCH_SIZE, shuffle=False, collate_fn=collate_fn)
 
-        self.model.to(device)
+        # create a model if it doesn't have path
+        if self.model is None:
+            self.model = self.build_model(5, False)
+
         verbose = self.args.verbose
 
         params = [p for p in self.model.parameters() if p.requires_grad]
@@ -77,15 +76,25 @@ class FishDetectionModel:
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.learning_rate_size,
                                                        gamma=self.args.gamma)
 
+        epoch_checkpoint = 0
+        if self.args.load_checkpoint:
+            checkpoint = torch.load(self.args.checkpoint_path)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            lr_scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            epoch_checkpoint = checkpoint['epoch']
+
+        self.model.to(device)
+
         with wandb.init(config=vars(self.args)):
-            for epoch in range(self.args.epochs):
+            for epoch in range(epoch_checkpoint, self.args.epochs):
                 should_log = (epoch + 1) % LOG_FREQUENCY == 0
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
-                avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness = self._train_one_epoch(
-                    optimizer, data_loader, device, verbose)
+                avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness, avg_train_box_reg = \
+                    self._train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
-                avg_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg = self._evaluate(
-                    data_loader_test, should_log, device, verbose)
+                avg_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg, avg_val_box_reg = \
+                    self._evaluate(data_loader_test, should_log, device, verbose)
 
                 if verbose:
                     print('\nLosses of epoch num {} are:'.format(epoch + 1))
@@ -97,27 +106,34 @@ class FishDetectionModel:
                            "avg_train_classifier": avg_train_classifier,
                            "avg_train_rpn_box_reg": avg_train_rpn_box_reg,
                            "avg_train_objectness": avg_train_objectness,
+                           "avg_train_box_reg": avg_train_box_reg,
                            "avg_val_classifier": avg_val_classifier,
                            "avg_val_objectness": avg_val_objectness,
-                           "avg_val_rpn_box_reg": avg_val_rpn_box_reg
+                           "avg_val_rpn_box_reg": avg_val_rpn_box_reg,
+                           "avg_val_box_reg":avg_val_box_reg
                            })
 
                 if epoch + 1 >= SHOULD_SAVE_MODEL and epoch % SAVE_MODEL_FREQUENCY == 0:
-                    model_name = time.strftime("%Y%m%d-%H%M%S")
-                    print('Saving model, epoch: {} name: {}'.format(epoch + 1, model_name))
-                    torch.save(self.model, self.args.output_path + model_name)
+                    cur_name = time.strftime("%Y%m%d-%H%M%S")
+                    print('Saving model, epoch: {} name: {}'.format(epoch + 1, cur_name))
+                    torch.save(self.model, self.args.output_path + cur_name)
+                    torch.save({
+                        'epoch': epoch,
+                        'model_state_dict': self.model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'scheduler_state_dict': lr_scheduler.state_dict(),
+                    }, os.path.join(self.args.checkpoint_path, cur_name + ".pt"))
 
             # Saving the model in the specified path
-            model_name = time.strftime("%Y%m%d-%H%M%S")
-            torch.save(self.model, self.args.output_path + model_name)
+            cur_name = time.strftime("%Y%m%d-%H%M%S")
+            torch.save(self.model, self.args.output_path + cur_name)
 
-    def log_to_wb(self, images, targets, train=False, log_iou=True):
+    def log_to_wb(self, images, targets, train=False):
         """
         Logging predicted images and IOU to weights and biases
         :param train: If the log is connected to the train
         :param images: The images themselves
         :param targets: The real results of the images
-        :param log_iou:  Boolean indicate whether to log the IOU data
         :return: batch IOU sum and number of boxes if log_iou is true else None
         """
         with torch.no_grad():
@@ -169,6 +185,7 @@ class FishDetectionModel:
         avg_train_classifier = 0
         avg_train_objectness = 0
         avg_train_rpn_box_reg = 0
+        avg_train_box_reg = 0
 
         for i, (images, targets, _) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
             images = list(image.to(device) for image in images)
@@ -184,6 +201,7 @@ class FishDetectionModel:
                 avg_train_classifier += loss_dict['loss_classifier'].cpu().item()
                 avg_train_objectness += loss_dict['loss_objectness'].cpu().item()
                 avg_train_rpn_box_reg += loss_dict['loss_rpn_box_reg'].cpu().item()
+                avg_train_box_reg += loss_dict['loss_box_reg'].cpu().item()
 
                 # Because of shuffle in the train data set we always take the first image of each epoch
                 img_log = i == 0
@@ -203,7 +221,7 @@ class FishDetectionModel:
         avg_train_rpn_box_reg /= len(data_loader.dataset)
         avg_train_classifier /= len(data_loader.dataset)
 
-        return avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness
+        return avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness, avg_train_box_reg
 
     def _evaluate(self, val_set, img_log, device, verbose=True):
         # In order to get the validation loss we need to use .train()
@@ -212,6 +230,7 @@ class FishDetectionModel:
         avg_val_classifier = 0
         avg_val_objectness = 0
         avg_val_rpn_box_reg = 0
+        avg_val_box_reg = 0
 
         with torch.no_grad():
             if verbose:
@@ -230,17 +249,18 @@ class FishDetectionModel:
                 avg_val_classifier += loss_dict['loss_classifier'].cpu().item()
                 avg_val_objectness += loss_dict['loss_objectness'].cpu().item()
                 avg_val_rpn_box_reg += loss_dict['loss_rpn_box_reg'].cpu().item()
+                avg_val_box_reg += loss_dict['loss_box_reg'].cpu().item()
 
                 if img_log:
                     print("Logging validation images to weights and biases")
-                    self.log_to_wb(images, targets, img_log)
+                    self.log_to_wb(images, targets)
 
         total_val_loss = avg_val_loss / len(val_set)
         avg_val_classifier /= len(val_set.dataset)
         avg_val_objectness /= len(val_set.dataset)
         avg_val_rpn_box_reg /= len(val_set.dataset)
 
-        return total_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg
+        return total_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg, avg_val_box_reg
 
     def test(self, root_path, csv_path, output_path, class_names=None, cls_thresh=0.5, iou_thresh=0.4):
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

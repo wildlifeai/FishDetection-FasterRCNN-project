@@ -11,10 +11,10 @@ class SpyFishAotearoaDataset(torch.utils.data.Dataset):
         self.transforms = transforms
         file_path = os.path.join(root_dir, "output", file_name)
         self.table = pd.read_csv(file_path, converters={
-            "x": ast.literal_eval,
-            "y": ast.literal_eval,
-            "h": ast.literal_eval,
-            "w": ast.literal_eval,
+            "x1": ast.literal_eval,
+            "y1": ast.literal_eval,
+            "x2": ast.literal_eval,
+            "y2": ast.literal_eval,
             "label": ast.literal_eval
         })
         self.imgs_path = os.path.join(root_dir, "images")
@@ -28,16 +28,16 @@ class SpyFishAotearoaDataset(torch.utils.data.Dataset):
 
         img = Image.open(img_path)
 
-        num_objs = len(self.table.loc[idx].x)
+        num_objs = len(self.table.loc[idx].x1)
         boxes = []
 
         for i in range(num_objs):
-            x = self.table.loc[idx].x[i]
-            y = self.table.loc[idx].y[i]
-            width = self.table.loc[idx].w[i]
-            height = self.table.loc[idx].h[i]
+            x1 = self.table.loc[idx].x1[i]
+            y1 = self.table.loc[idx].y1[i]
+            x2 = self.table.loc[idx].x2[i]
+            y2 = self.table.loc[idx].y2[i]
 
-            boxes.append([x, y, x + width, y + height])
+            boxes.append([x1, y1, x2, y2])
 
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
         image_id = torch.tensor([idx])

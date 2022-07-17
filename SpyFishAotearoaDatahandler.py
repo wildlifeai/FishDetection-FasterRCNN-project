@@ -13,10 +13,6 @@ def extract_image_name(label_file_name) -> str:
     return label_file_name.split(".")[0] + ".jpg"
 
 
-def get_avg_area(h_list, w_list) -> list:
-    return [h * w for h, w in zip(h_list, w_list)]
-
-
 def write_file(dir_path, files_names, output_name):
     df = pd.DataFrame(columns=['label', 'x', 'y', 'h', 'w', 'image_name'])
 
@@ -30,14 +26,16 @@ def write_file(dir_path, files_names, output_name):
         labels_info = pd.read_csv(os.path.join(dir_path, "labels", filename), names=['label', 'x', 'y', 'h', 'w'], sep=' ')
 
         # The data is given in YOLO format therefore the x and y coordinates are in the middle
-        w = list(map(lambda x: float(x) * width, labels_info.w))
-        h = list(map(lambda x: float(x) * height, labels_info.h))
-        y = list(map(lambda x: float(x) * height, labels_info.y))
-        x = list(map(lambda x: float(x) * width, labels_info.x))
+        y = list(map(lambda x: float(x), labels_info.y))
+        x = list(map(lambda x: float(x), labels_info.x))
+        w = list(map(lambda x: float(x), labels_info.w))
+        h = list(map(lambda x: float(x), labels_info.h))
         label = list(map(lambda x: int(x) + 1, labels_info.label))
-        y = [val - w[i] / 2 for i, val in enumerate(y)]
-        x = [val - h[i] / 2 for i, val in enumerate(x)]
-        df = df.append({'label': label, 'x': x, 'y': y, 'h': h, 'w': w,
+        y1 = [int((val * height) - ((w[i] / 2) * height)) for i, val in enumerate(y)]
+        x1 = [int((val * width) - ((h[i] / 2) * width)) for i, val in enumerate(x)]
+        x2 = [int((val * width) + ((h[i] / 2) * width)) for i, val in enumerate(x)]
+        y2 = [int((val * height) + ((w[i] / 2) * height)) for i, val in enumerate(y)]
+        df = df.append({'label': label, 'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2,
                         'image_name': extract_image_name(image_name)}, ignore_index=True)
 
     df.to_csv(output_name, index=False)

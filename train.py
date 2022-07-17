@@ -105,10 +105,29 @@ def main():
         help="Print more if true"
     )
 
+    parser.add_argument(
+        "-lck",
+        "--load_checkpoint",
+        type=bool,
+        default=False,
+        help="A boolean indicate whether to load checkpoint"
+    )
+
+    parser.add_argument(
+        "-ckp",
+        "--checkpoint_path",
+        type=str,
+        default='./data/checkpoints',
+        help="The path to save the checkpoints"
+    )
+
     args = parser.parse_args()
 
     if not os.path.isdir('./output'):
         os.mkdir("./output")
+
+    if not os.path.isdir('./data/checkpoints'):
+        os.mkdir("./data/checkpoints")
 
     model = FishDetectionModel(args)
     model.train()
