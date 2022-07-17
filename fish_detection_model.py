@@ -10,6 +10,7 @@ from SpyFishAotearoaDataset import SpyFishAotearoaDataset
 from utils.general_utils import collate_fn, apply_mns, get_transform
 from utils.plot_image_bounding_box import add_bounding_boxes
 from torchvision.ops import box_iou
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 LOG_FREQUENCY = 1
 NMS_THRESHOLD = 0.3
@@ -262,7 +263,7 @@ class FishDetectionModel:
 
         return total_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg, avg_val_box_reg
 
-    def test(self, root_path, csv_path, output_path, class_names=None, cls_thresh=0.5, iou_thresh=0.4):
+    def test(self, root_path, output_path, class_names=None, cls_thresh=0.5, iou_thresh=0.4):
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         print(f"using {device} as device")
 
@@ -279,9 +280,12 @@ class FishDetectionModel:
             print('Starting to test over the data set\n')
             total_iou = 0
 
+            # For calculating mAP
+            metric = MeanAveragePrecision()
+
             for i, (images, targets, idx) in enumerate(tqdm(data_loader_test, position=0, leave=True)):
                 images = list(image.to(device) for image in images)
-                cur_index = idx[0]  # todo: check if index is necessary
+                cur_index = idx[0]
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets][0]
 
                 pred = self.model(images)
@@ -292,11 +296,15 @@ class FishDetectionModel:
                     'scores': pred[0]['scores'].detach().cpu()
                 }
 
-                iou = box_iou(targets['boxes'].cpu(), pred['boxes'])  # todo: check what boxes is all about
+                # Update mAp
+                metric.update(pred, targets)
+
+                # Update IOU
+                iou = box_iou(targets['boxes'].cpu(), pred['boxes'])
                 max_iou = torch.max(iou, dim=1).values if iou.shape[1] != 0 else torch.Tensor([0])
                 total_iou += torch.mean(max_iou)
 
-                # log images here?
+                # log images here
                 image_to_log = images[0].cpu().numpy().transpose(1, 2, 0)
                 image_to_log = cv2.cvtColor(image_to_log, cv2.COLOR_BGR2RGB)
 
@@ -310,3 +318,4 @@ class FishDetectionModel:
                 image_to_log.save(os.path.join(output_path, "test_" + dataset_test.get_image_name(cur_index)))
 
             print("Average IOU all over the images: {}".format(total_iou / len(data_loader_test)))
+            print("mAP score over all test images:{}".format(metric.compute()))
