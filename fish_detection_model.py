@@ -286,7 +286,7 @@ class FishDetectionModel:
             for i, (images, targets, idx) in enumerate(tqdm(data_loader_test, position=0, leave=True)):
                 images = list(image.to(device) for image in images)
                 cur_index = idx[0]
-                targets = [{k: v.to(device) for k, v in t.items()} for t in targets][0]
+                targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
                 pred = self.model(images)
 
@@ -296,11 +296,16 @@ class FishDetectionModel:
                     'scores': pred[0]['scores'].detach().cpu()
                 }
 
+                targets = {
+                    'boxes': targets[0]['boxes'].detach().cpu(),
+                    'labels': targets[0]['labels'].cpu(),
+                }
+
                 # Update mAp
-                metric.update(pred, targets)
+                metric.update([pred], [targets])
 
                 # Update IOU
-                iou = box_iou(targets['boxes'].cpu(), pred['boxes'])
+                iou = box_iou(targets['boxes'].cpu(), pred['boxes'].cpu())
                 max_iou = torch.max(iou, dim=1).values if iou.shape[1] != 0 else torch.Tensor([0])
                 total_iou += torch.mean(max_iou)
 
