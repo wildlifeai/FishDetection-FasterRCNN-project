@@ -4,8 +4,8 @@ import time
 from fish_detection_model import FishDetectionModel
 
 LEARNING_RATE = 1e-5
-EPOCHS = 10
-BATCH_SIZE = 2
+EPOCHS = 120
+BATCH_SIZE = 8
 MOMENTUM = 0.0435
 WEIGHT_DECAY = 0
 GAMMA = 0.1
@@ -117,7 +117,7 @@ def main():
         "-ckp",
         "--checkpoint_path",
         type=str,
-        default='./data/checkpoints',
+        default='./data/checkpoints1',
         help="The path to save the checkpoints"
     )
 
@@ -126,8 +126,8 @@ def main():
     if not os.path.isdir('./output'):
         os.mkdir("./output")
 
-    if not os.path.isdir('./data/checkpoints'):
-        os.mkdir("./data/checkpoints")
+    if not os.path.isdir('./data/checkpoints1'):
+        os.mkdir("./data/checkpoints1")
 
     model = FishDetectionModel(args)
     model.train()

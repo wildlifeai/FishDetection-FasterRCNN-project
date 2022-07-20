@@ -12,11 +12,12 @@ from utils.plot_image_bounding_box import add_bounding_boxes
 from torchvision.ops import box_iou
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
-LOG_FREQUENCY = 1
+CHECKPOINT_FREQUENCY = 20
+LOG_FREQUENCY = 10
 NMS_THRESHOLD = 0.3
-TEST_BATCH_SIZE = 10
-SAVE_MODEL_FREQUENCY = 1
-SHOULD_SAVE_MODEL = 1
+TEST_BATCH_SIZE = 8
+SAVE_MODEL_FREQUENCY = 20
+SHOULD_SAVE_MODEL = 40
 VALIDATION_IOU_LOG = False
 
 
@@ -118,6 +119,8 @@ class FishDetectionModel:
                     cur_name = time.strftime("%Y%m%d-%H%M%S")
                     print('Saving model, epoch: {} name: {}'.format(epoch + 1, cur_name))
                     torch.save(self.model, self.args.output_path + cur_name)
+                    
+                if epoch + 1 >= SHOULD_SAVE_MODEL and epoch % CHECKPOINT_FREQUENCY == 0:
                     torch.save({
                         'epoch': epoch,
                         'model_state_dict': self.model.state_dict(),
@@ -125,9 +128,9 @@ class FishDetectionModel:
                         'scheduler_state_dict': lr_scheduler.state_dict(),
                     }, os.path.join(self.args.checkpoint_path, cur_name + ".pt"))
 
-            # Saving the model in the specified path
-            cur_name = time.strftime("%Y%m%d-%H%M%S")
-            torch.save(self.model, self.args.output_path + cur_name)
+                    # Saving the model in the specified path
+                    cur_name = time.strftime("%Y%m%d-%H%M%S")
+                    torch.save(self.model, self.args.output_path + cur_name)
 
     def log_to_wb(self, images, targets, train=False):
         """
