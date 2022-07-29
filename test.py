@@ -37,7 +37,7 @@ def main():
         os.mkdir(args.output_path)
 
     model = FishDetectionModel(args)
-    model.test(args.path_data, args.path_data_csv, args.output_path)
+    model.test(args.path_data, args.output_path)
 
 
 if __name__ == '__main__':

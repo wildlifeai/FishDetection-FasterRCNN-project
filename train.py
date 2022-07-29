@@ -86,7 +86,7 @@ def main():
         "-o",
         "--output_path",
         type=str,
-        default=f"./output/faster-rcnn-model-{time.time()}",
+        default=f"./output/faster-rcnn-model-",
         help="Define an output path for the model")
 
     parser.add_argument(
@@ -117,8 +117,16 @@ def main():
         "-ckp",
         "--checkpoint_path",
         type=str,
-        default='./data/checkpoints1',
+        default='./data/checkpoints_save',
         help="The path to save the checkpoints"
+    )
+
+    parser.add_argument(
+        "-dr",
+        "--dropout",
+        type=float,
+        default=0.25,
+        help="A dropout to add to the MLPHead"
     )
 
     args = parser.parse_args()
@@ -126,8 +134,8 @@ def main():
     if not os.path.isdir('./output'):
         os.mkdir("./output")
 
-    if not os.path.isdir('./data/checkpoints1'):
-        os.mkdir("./data/checkpoints1")
+    if not os.path.isdir('./data/checkpoints_save'):
+        os.mkdir("./data/checkpoints_save")
 
     model = FishDetectionModel(args)
     model.train()

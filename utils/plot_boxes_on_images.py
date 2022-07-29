@@ -31,15 +31,11 @@ def print_images(img_path, file_name, should_save, output_path):
         images = list(image for image in images)
         targets = [{k: v for k, v in t.items()} for t in targets]
 
-        num_boxes = len(targets[0]["boxes"])
-
-        classes = torch.Tensor([0] * num_boxes)  # todo:change once we finish the classes
-
         log_images = images[0]
         log_images = log_images.cpu().numpy().transpose(1, 2, 0)
         log_images = cv2.cvtColor(log_images, cv2.COLOR_BGR2RGB)
 
-        img = add_bounding_boxes(log_images, classes, targets[0]["boxes"])
+        img = add_bounding_boxes(log_images, targets[0]['labels'], targets[0]["boxes"])
 
         if should_save:
             image_name = dataset.get_image_name(index).split(".jpg")[0]
