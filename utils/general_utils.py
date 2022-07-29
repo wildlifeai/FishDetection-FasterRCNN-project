@@ -43,5 +43,5 @@ def get_transform(train):
     if train:
         transforms.append(T.RandomHorizontalFlip(0.5))
         transforms.append(T.RandomVerticalFlip(0.5))
-        transforms.append(T.RandomGrayScale(0.1))
+        transforms.append(T.RandomChannelDistortion(0.3))
     return T.Compose(transforms)

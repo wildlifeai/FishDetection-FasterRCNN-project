@@ -1,4 +1,6 @@
 import random
+import torch
+import numpy as np
 from torch import fliplr
 from torchvision.transforms import functional as F
 
@@ -38,6 +40,20 @@ class RandomGrayScale(object):
     def __call__(self, image, target):
         if random.random() < self.prob:
             image = F.rgb_to_grayscale(image, 3)
+        return image, target
+
+
+class RandomChannelDistortion(object):
+    def __init__(self, prob):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            channel = random.randint(0, 2)
+            na = np.array(image).astype(np.float)
+            na[..., channel] += 0.01
+            na = np.clip(na, 0, 1)
+            image = torch.Tensor(na)
         return image, target
 
 
