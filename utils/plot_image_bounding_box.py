@@ -19,7 +19,7 @@ def add_bounding_boxes(img, pred_cls, boxes, pred_score=None, thresh=0.35, rect_
     :return: Returns the image with boxes and labels as PIL
     """
     # turn classification tensors to numpy
-    pred_cls = pred_cls.numpy()  # TODO: When have more classes - add mapping from int class to string
+    pred_cls = pred_cls.numpy()
 
     if pred_score is not None:
         pred_score = pred_score.numpy()

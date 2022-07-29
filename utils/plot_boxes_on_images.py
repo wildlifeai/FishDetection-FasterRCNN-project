@@ -10,8 +10,6 @@ import matplotlib.pyplot as plt
 from utils.plot_image_bounding_box import add_bounding_boxes
 
 
-# todo: check how to save our work in the computers
-
 def print_images(img_path, file_name, should_save, output_path):
     """
 

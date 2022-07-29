@@ -164,7 +164,8 @@ class FishDetectionModel:
                     }
                 )
 
-                parsed_results[i] = apply_mns(parsed_results[i], NMS_THRESHOLD)
+                parsed_results[i] = apply_mns(parsed_results[i], iou_thresh=NMS_THRESHOLD)
+                parsed_results[i] = apply_mns(parsed_results[i], applyAll=True, iou_thresh=0.8)
 
                 # Adding bounding boxes of the prediction
                 image_to_log = img.cpu().numpy().transpose(1, 2, 0)
@@ -317,6 +318,7 @@ class FishDetectionModel:
 
                 # apply NMS on prediction
                 pred = apply_mns(pred, nms_thresh)
+                pred = apply_mns(pred, applyAll=True, iou_thresh=0.8)
 
                 # Update mAp
                 metric.update([pred], [targets])

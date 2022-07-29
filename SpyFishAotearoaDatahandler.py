@@ -61,8 +61,6 @@ def parse_data(dir_path, train_size, validation_size, output_path) -> None:
     write_file(dir_path, file_list[train:validation], os.path.join(output_path, "validation.csv"))
     write_file(dir_path, file_list[validation:], os.path.join(output_path, "test.csv"))
 
-    # todo add a dictionary of number and class name
-
 
 def main():
     parser = argparse.ArgumentParser()
