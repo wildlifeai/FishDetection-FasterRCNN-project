@@ -63,7 +63,7 @@ class FishDetectionModel:
         print(f"using {device} as device")
 
         # Creating data loaders
-        dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
+        dataset = SpyFishAotearoaDataset(self.args.data_path, "train_style_dancing.csv", get_transform(train=True))
         dataset_test = SpyFishAotearoaDataset(self.args.data_path, "validation.csv", get_transform(train=False))
 
         data_loader = torch.utils.data.DataLoader(
