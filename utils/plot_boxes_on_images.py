@@ -74,7 +74,7 @@ def main():
         "-n",
         "--file_name",
         type=str,
-        default="validation.csv",
+        default="test.csv",
         help="The name of the csv file"
     )
 

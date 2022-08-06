@@ -1,6 +1,5 @@
 import os
 import argparse
-import time
 from fish_detection_model import FishDetectionModel
 
 LEARNING_RATE = 1e-5
@@ -125,7 +124,7 @@ def main():
         "-dr",
         "--dropout",
         type=float,
-        default=0.25,
+        default=None,
         help="A dropout to add to the MLPHead"
     )
 
