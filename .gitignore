@@ -10,7 +10,9 @@ venv.bak/
 
 # Libraries
 .idea/
-output/
+./output/
+./data/images_with_labels
+./data/checkpoints_save
 wandb/
 _pycache_/
 __pycache__/
