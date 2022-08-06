@@ -44,10 +44,12 @@ class FishDetectionModel:
         :return: faster-rcnn model
         """
 
-        if self.args.dropout is not None:
-            box_head = MLPHead(dropout=self.args.dropout)
-        else:
-            box_head = None
+        # if self.args.dropout is not None:
+        #     box_head = MLPHead(dropout=self.args.dropout)
+        # else:
+        #     box_head = None
+
+        box_head = None
 
         model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained, box_head=box_head,
                                                                      min_size=MIN_SIZE, max_size=MAX_SIZE)
