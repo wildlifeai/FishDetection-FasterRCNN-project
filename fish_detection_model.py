@@ -27,8 +27,6 @@ MAX_SIZE = 1920
 
 class FishDetectionModel:
     def __init__(self, args):
-        # initialize wandb logging for the project
-        wandb.init(project="project-wildlife-ai", entity="adi-ohad-heb-uni")
         self.model = None
 
         if args.load_model:
@@ -58,48 +56,49 @@ class FishDetectionModel:
 
         return model
 
-    def train(self):
-        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        print(f"using {device} as device")
+    def train(self, config=None):
+        with wandb.init(config=config):
+            config = wandb.config
+            device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+            print(f"using {device} as device")
 
-        # Creating data loaders
-        dataset = SpyFishAotearoaDataset(self.args.data_path, "train_style_dancing.csv", get_transform(train=True))
-        dataset_test = SpyFishAotearoaDataset(self.args.data_path, "validation.csv", get_transform(train=False))
+            # Creating data loaders
+            dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
+            dataset_test = SpyFishAotearoaDataset(self.args.data_path, "validation.csv", get_transform(train=False))
 
-        data_loader = torch.utils.data.DataLoader(
-            dataset, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
+            data_loader = torch.utils.data.DataLoader(
+                dataset, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
 
-        data_loader_test = torch.utils.data.DataLoader(
-            dataset_test, batch_size=TEST_BATCH_SIZE, shuffle=False, collate_fn=collate_fn)
+            data_loader_test = torch.utils.data.DataLoader(
+                dataset_test, batch_size=TEST_BATCH_SIZE, shuffle=False, collate_fn=collate_fn)
 
-        # create a model if it doesn't have path
-        if self.model is None:
-            self.model = self.build_model(5, False)
+            # create a model if it doesn't have path
+            if self.model is None:
+                self.model = self.build_model(5, False)
 
-        verbose = self.args.verbose
+            verbose = self.args.verbose
 
-        params = [p for p in self.model.parameters() if p.requires_grad]
+            params = [p for p in self.model.parameters() if p.requires_grad]
 
-        optimizer = torch.optim.Adam(params, lr=self.args.learning_rate, weight_decay=self.args.weight_decay,
-                                     betas=(0.09, 0.999))
+            optimizer = torch.optim.Adam(params, lr=config.learning_rate, weight_decay=config.weight_decay,
+                                         betas=(0.09, 0.999))
 
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.learning_rate_size,
-                                                       gamma=self.args.gamma)
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=config.learning_rate_size,
+                                                           gamma=config.gamma)
 
-        epoch_checkpoint = 0
-        if self.args.load_checkpoint:
-            checkpoint = torch.load(self.args.checkpoint_path)
-            self.model.load_state_dict(checkpoint['model_state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            lr_scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-            epoch_checkpoint = checkpoint['epoch']
+            epoch_checkpoint = 0
+            if self.args.load_checkpoint:
+                checkpoint = torch.load(self.args.checkpoint_path)
+                self.model.load_state_dict(checkpoint['model_state_dict'])
+                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                lr_scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+                epoch_checkpoint = checkpoint['epoch']
 
-        self.model.to(device)
+            self.model.to(device)
 
-        with wandb.init(config=vars(self.args)):
-            for epoch in range(epoch_checkpoint, self.args.epochs):
+            for epoch in range(epoch_checkpoint, config.epochs):
                 should_log = (epoch + 1) % LOG_FREQUENCY == 0
-                print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
+                print('Epoch {} of {}'.format(epoch + 1, config.epochs))
                 avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness, avg_train_box_reg = \
                     self._train_one_epoch(optimizer, data_loader, device, verbose)
                 lr_scheduler.step()
@@ -127,7 +126,7 @@ class FishDetectionModel:
                     cur_name = time.strftime("%Y%m%d-%H%M%S")
                     print('Saving model, epoch: {} name: {}'.format(epoch + 1, cur_name))
                     torch.save(self.model, self.args.output_path + cur_name + ".model")
-                    
+
                 if epoch + 1 >= SHOULD_SAVE_MODEL and epoch % CHECKPOINT_FREQUENCY == 0:
                     torch.save({
                         'epoch': epoch,
@@ -141,7 +140,7 @@ class FishDetectionModel:
             name = cur_name + "_TrainedModel" + ".model"
             print('Saving last model,name: {}'.format(name))
             torch.save(self.model, self.args.output_path + name)
-
+            self.model = None
 
     def log_to_wb(self, images, targets, train=False):
         """

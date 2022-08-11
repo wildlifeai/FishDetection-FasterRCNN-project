@@ -56,9 +56,9 @@ def count_types(x, count_dict):
     return x
 
 
-def get_areas(h_list, w_list) -> list:
+def get_areas(h_list, w_list) -> list:  # todo: We need to fix, after the transformation of the labels
     """
-    Gets a list of hights and widths of squeres and returns a list of their areas
+    Gets a list of heights and widths of squares and returns a list of their areas
     """
     h_list = json.loads(h_list)
     w_list = json.loads(w_list)

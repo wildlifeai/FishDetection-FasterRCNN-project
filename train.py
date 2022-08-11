@@ -1,5 +1,6 @@
 import os
 import argparse
+import wandb
 from fish_detection_model import FishDetectionModel
 
 LEARNING_RATE = 1e-5
@@ -128,6 +129,14 @@ def main():
         help="A dropout to add to the MLPHead"
     )
 
+    parser.add_argument(
+        "-sw",
+        "--sweep",
+        type=int,
+        default=3,
+        help="A boolean indicate whether to use sweep or single run"
+    )
+
     args = parser.parse_args()
 
     if not os.path.isdir('./output'):
@@ -137,7 +146,47 @@ def main():
         os.mkdir("./data/checkpoints_save")
 
     model = FishDetectionModel(args)
-    model.train()
+
+    if args.sweep > 1:
+        sweep_config = {
+            "name": "wildai-config-sweep",
+            "method": "bayes",
+            "metric": {
+              "name": "total_validation_loss",
+              "goal": "minimize"
+            },
+            "parameters": {
+                "epochs": {
+                    "values": [1, 2]
+                },
+                "learning_rate": {
+                    'distribution': 'uniform',
+                    'min': 0,
+                    'max': 0.1
+                },
+                "weight_decay": {
+                    'distribution': 'uniform',
+                    'min': 0,
+                    'max': 0.1
+                },
+                "learning_rate_size": {
+                    'distribution': 'uniform',
+                    'min': 0,
+                    'max': 0.1
+                },
+                "gamma": {
+                    'distribution': 'uniform',
+                    'min': 0,
+                    'max': 0.1
+                },
+            }
+        }
+        sweep_id = wandb.sweep(sweep_config, project="project-wildlife-ai", entity="adi-ohad-heb-uni")
+        wandb.agent(sweep_id, model.train, count=args.sweep)
+    else:
+        # initialize wandb logging for the project
+        wandb.init(project="project-wildlife-ai", entity="adi-ohad-heb-uni")
+        model.train()
 
 
 if __name__ == '__main__':
