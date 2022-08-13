@@ -49,6 +49,11 @@ def get_transform(train):
 
 
 def get_transform_style(im_size):
-    transforms = [T.ToTensor(), F.Resize(im_size)]
+    """
+    Apply transformation of the style on the images
+    :param im_size: The size of required image
+    :return: Transformer of the style
+    """
+    transforms = [F.ToTensor(), F.Resize(im_size)]
 
-    return T.Compose(transforms)
+    return F.Compose(transforms)

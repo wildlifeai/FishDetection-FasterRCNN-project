@@ -49,22 +49,22 @@ def transfer_single_dataset(data_path, style_path, output_images_path, style_nam
         image.save(os.path.join(output_images_path, image_name))
 
 
-def transfer_datasets(data_path, style_folder_path, input_csv, output_images_path, output_csv_path):
-    for style_image in os.listdir(style_folder_path):
-        transfer_single_dataset(data_path, os.path.join(style_folder_path, style_image),
+def transfer_datasets(data_path, style_images_path, input_csv, output_images_path, output_csv_path):
+    for style_image in os.listdir(style_images_path):
+        transfer_single_dataset(os.path.join(data_path, "images"), os.path.join(style_images_path, style_image),
                                 output_images_path, style_image)
 
     # create csv file
     original_table = pd.read_csv(input_csv)
     rows_num = original_table.shape[0]
 
-    styles_reps = len(os.listdir(style_folder_path)) + 1 # adding one because we want the original images to stay in the csv
+    styles_reps = len(os.listdir(style_images_path)) + 1 # adding one because we want the original images to stay in the csv
 
     style_table = pd.concat([original_table] * styles_reps, ignore_index=True)
 
     low, high = rows_num, rows_num * 2 - 1
 
-    for style_image in os.listdir(style_folder_path):
+    for style_image in os.listdir(style_images_path):
         style_table.loc[low:high, "image_name"] = style_image + style_table.loc[
                                                               low:high,
                                                               "image_name"]
@@ -86,7 +86,7 @@ def main():
 
     parser.add_argument(
         "-s",
-        "--style_image_path",
+        "--style_images_path",
         type=str,
         help="The path of the style images",
         default="..\\..\\data\\style_images"
@@ -119,10 +119,10 @@ def main():
     args = parser.parse_args()
 
     # generating the default output folder if not exists
-    if not os.path.isdir(args.output_path):
-        os.mkdir(args.output_path)
+    if not os.path.isdir("..\\..\\output"):
+        os.mkdir("..\\..\\output")
 
-    transfer_datasets(args.data_path, args.style_folder_path, args.input_csv, args.output_images_path,
+    transfer_datasets(args.data_path, args.style_images_path, args.input_csv, args.output_images_path,
                       args.output_csv_path)
 
 
