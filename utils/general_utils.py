@@ -1,6 +1,7 @@
-from torchvision.ops import batched_nms
 import utils.transformers as T
+import torchvision.transforms as F
 import torch
+from torchvision.ops import batched_nms
 
 
 def collate_fn(batch):
@@ -44,4 +45,10 @@ def get_transform(train):
         transforms.append(T.RandomHorizontalFlip(0.5))
         transforms.append(T.RandomVerticalFlip(0.5))
         transforms.append(T.RandomChannelDistortion(0.3))
+    return T.Compose(transforms)
+
+
+def get_transform_style(im_size):
+    transforms = [T.ToTensor(), F.Resize(im_size)]
+
     return T.Compose(transforms)

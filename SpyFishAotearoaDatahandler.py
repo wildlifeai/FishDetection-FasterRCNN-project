@@ -100,11 +100,11 @@ def main():
     args = parser.parse_args()
 
     # generating the default output folder if not exists
-    if not os.path.isdir(DEFAULT_OUTPUT_FOLDER):
-        os.mkdir(DEFAULT_OUTPUT_FOLDER)
+    if not os.path.isdir(args.output_path):
+        os.mkdir(args.output_path)
 
     parse_data(args.data_path, args.train_size, args.validation_size,
-               DEFAULT_OUTPUT_FOLDER)
+               args.output_path)
 
 
 if __name__ == '__main__':

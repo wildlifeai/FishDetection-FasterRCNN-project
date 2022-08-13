@@ -66,7 +66,7 @@ def main():
         "-op",
         "--output_path",
         type=str,
-        default=".\\images_with_labels",
+        default="..\\output\\images_with_labels",
         help="A path to save the images with the boxes"
     )
 
