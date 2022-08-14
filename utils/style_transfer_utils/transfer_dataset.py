@@ -27,7 +27,7 @@ def transfer_single_dataset(data_path, style_path, output_images_path, style_nam
     loader = get_transform_style(IM_SIZE)
     unloader = T.ToPILImage()  # reconvert into PIL image
 
-    content_images, content_images_names = create_content(data_path, loader)
+    content_images_names = os.listdir(data_path)
 
     style_image = load_style_images(style_path, loader)
 
@@ -37,9 +37,10 @@ def transfer_single_dataset(data_path, style_path, output_images_path, style_nam
     cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
 
     # Do style transfer for all the content images and save in drive
-    for i, content_img in enumerate(content_images):
+    for i, content_img in enumerate(content_images_names):
+        print(f"transferring {content_img} to style {style_image}")
         torch.cuda.empty_cache()
-        input_img = content_img.clone()
+        input_img = image_loader(os.path.join(data_path, content_img), loader)
         output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
                                     input_img, T.Resize(content_img.shape[-2:])(style_image), content_img)
         image = output.cpu().clone()  # we clone the tensor to not do changes on it
@@ -81,7 +82,7 @@ def main():
         "-p",
         "--data_path",
         type=str,
-        default="..\\..\\data_0808",
+        default="./data_0808",
         help="The path of the data directory")
 
     parser.add_argument(
@@ -89,7 +90,7 @@ def main():
         "--style_images_path",
         type=str,
         help="The path of the style images",
-        default="..\\..\\data\\style_images"
+        default="./data/style_images"
     )
 
     parser.add_argument(
@@ -97,7 +98,7 @@ def main():
         "--input_csv",
         type=str,
         help="Path to csv file",
-        default="..\\..\\data_0808\\output\\train.csv"
+        default="./data_0808/output/train.csv"
     )
 
     parser.add_argument(
@@ -105,7 +106,7 @@ def main():
         "--output_images_path",
         type=str,
         help="Save the generated images to",
-        default="..\\..\\data_0808\\images"
+        default="./data_0808/images"
     )
 
     parser.add_argument(
@@ -113,14 +114,14 @@ def main():
         "--output_csv_path",
         type=str,
         help="The output path of the '.csv' files",
-        default="..\\..\\data_0808\\output\\style_train.csv"
+        default="./data_0808/output/style_train.csv"
     )
 
     args = parser.parse_args()
 
     # generating the default output folder if not exists
-    if not os.path.isdir("..\\..\\output"):
-        os.mkdir("..\\..\\output")
+    if not os.path.isdir("./output"):
+        os.mkdir("./output")
 
     transfer_datasets(args.data_path, args.style_images_path, args.input_csv, args.output_images_path,
                       args.output_csv_path)
