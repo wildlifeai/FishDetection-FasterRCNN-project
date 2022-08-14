@@ -16,3 +16,5 @@ venv.bak/
 wandb/
 _pycache_/
 __pycache__/
+./utils/.ipynb_checkpoints
+./utils/__pycache__
