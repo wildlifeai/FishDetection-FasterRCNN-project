@@ -81,7 +81,7 @@ def main():
         "-p",
         "--data_path",
         type=str,
-        default="..\\..\\data",
+        default="..\\..\\data_0808",
         help="The path of the data directory")
 
     parser.add_argument(
@@ -97,15 +97,15 @@ def main():
         "--input_csv",
         type=str,
         help="Path to csv file",
-        default="..\\..\\data\\style_images\\output\\train.csv"
+        default="..\\..\\data_0808\\output\\train.csv"
     )
 
     parser.add_argument(
         "-oi",
         "--output_images_path",
         type=str,
-        help="The output path of the '.csv' files",
-        default="..\\..\\data\\images"
+        help="Save the generated images to",
+        default="..\\..\\data_0808\\images"
     )
 
     parser.add_argument(
@@ -113,7 +113,7 @@ def main():
         "--output_csv_path",
         type=str,
         help="The output path of the '.csv' files",
-        default="..\\..\\data\\style_images\\output\\style_train.csv"
+        default="..\\..\\data_0808\\output\\style_train.csv"
     )
 
     args = parser.parse_args()
