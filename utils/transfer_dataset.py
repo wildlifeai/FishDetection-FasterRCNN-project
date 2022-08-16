@@ -12,7 +12,7 @@ import torchvision.models as models
 import torchvision.transforms as T
 
 from general_utils import get_transform_style
-from style_transfer_utils.style_transfer_lib import Normalization, ContentLoss, StyleLoss
+from style_transfer_lib import Normalization, ContentLoss, StyleLoss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
