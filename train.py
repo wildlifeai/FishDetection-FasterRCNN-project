@@ -133,7 +133,7 @@ def main():
         "-sw",
         "--sweep",
         type=int,
-        default=3,
+        default=1,
         help="A boolean indicate whether to use sweep or single run"
     )
 

@@ -19,7 +19,7 @@ LOG_FREQUENCY = 10
 NMS_THRESHOLD = 0.3
 TEST_BATCH_SIZE = 8
 SAVE_MODEL_FREQUENCY = 20
-SHOULD_SAVE_MODEL = 40
+SHOULD_SAVE_MODEL = 100
 VALIDATION_IOU_LOG = False
 MIN_SIZE = 480
 MAX_SIZE = 1920
@@ -34,40 +34,25 @@ class FishDetectionModel:
 
         self.args = args
 
-    def build_model(self, num_classes=2, pretrained=True):
-        """
-        Building a new pretrained model of faster rcnn
-        :param pretrained: Define if the model is pretrained
-        :param num_classes: The number of classes to predict
-        :return: faster-rcnn model
-        """
-
-        if self.args.dropout is not None:
-            print("Using generated MLP box head")
-            box_head = MLPHead(dropout=self.args.dropout)
-        else:
-            print("Using default box head")
-            box_head = None
-
-        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained, box_head=box_head,
-                                                                     min_size=MIN_SIZE, max_size=MAX_SIZE)
-        in_features = model.roi_heads.box_predictor.cls_score.in_features
-        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-
-        return model
-
     def train(self, config=None):
+        if config is None:
+            config = vars(self.args)
+
         with wandb.init(config=config):
             config = wandb.config
             device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
             print(f"using {device} as device")
 
             # Creating data loaders
+            dataset_with_style = SpyFishAotearoaDataset(self.args.data_path, "style_train.csv", get_transform(train=True))
             dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
             dataset_test = SpyFishAotearoaDataset(self.args.data_path, "validation.csv", get_transform(train=False))
 
             data_loader = torch.utils.data.DataLoader(
                 dataset, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
+
+            data_loader_style = torch.utils.data.DataLoader(
+                dataset_with_style, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
 
             data_loader_test = torch.utils.data.DataLoader(
                 dataset_test, batch_size=TEST_BATCH_SIZE, shuffle=False, collate_fn=collate_fn)
@@ -99,8 +84,18 @@ class FishDetectionModel:
             for epoch in range(epoch_checkpoint, config.epochs):
                 should_log = (epoch + 1) % LOG_FREQUENCY == 0
                 print('Epoch {} of {}'.format(epoch + 1, config.epochs))
+
+                if epoch + 1 > 80:
+                    chosen_data_loader = data_loader
+                    switch_classification_weight = True
+                    if epoch + 1 == 81:
+                        print("switching data loader")
+                else:
+                    switch_classification_weight = False
+                    chosen_data_loader = data_loader_style
+
                 avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness, avg_train_box_reg = \
-                    self._train_one_epoch(optimizer, data_loader, device, verbose)
+                    self._train_one_epoch(optimizer, chosen_data_loader, device, switch_classification_weight, verbose)
                 lr_scheduler.step()
                 avg_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg, avg_val_box_reg = \
                     self._evaluate(data_loader_test, should_log, device, verbose)
@@ -142,59 +137,7 @@ class FishDetectionModel:
             torch.save(self.model, self.args.output_path + name)
             self.model = None
 
-    def log_to_wb(self, images, targets, train=False):
-        """
-        Logging predicted images and IOU to weights and biases
-        :param train: If the log is connected to the train
-        :param images: The images themselves
-        :param targets: The real results of the images
-        :return: batch IOU sum and number of boxes if log_iou is true else None
-        """
-        with torch.no_grad():
-            self.model.eval()  # using evaluation mode in order to get the classifications
-            results = self.model(images)
-            parsed_results = []
-            all_images = []
-
-            for i, img in enumerate(images):
-                parsed_results.append(
-                    {
-                        'labels': results[i]['labels'].cpu(),
-                        'boxes': results[i]['boxes'].cpu(),
-                        'scores': results[i]['scores'].cpu()
-                    }
-                )
-
-                parsed_results[i] = apply_mns(parsed_results[i], iou_thresh=NMS_THRESHOLD)
-                parsed_results[i] = apply_mns(parsed_results[i], applyAll=True, iou_thresh=0.8)
-
-                # Adding bounding boxes of the prediction
-                image_to_log = img.cpu().numpy().transpose(1, 2, 0)
-                image_to_log = cv2.cvtColor(image_to_log, cv2.COLOR_BGR2RGB)
-
-                image_to_log = add_bounding_boxes(image_to_log, parsed_results[i]['labels'],
-                                                  parsed_results[i]['boxes'],
-                                                  pred_score=parsed_results[i]['scores'],
-                                                  color_box=(1, 1, 1),
-                                                  thresh=0.001,
-                                                  return_pil=False
-                                                  )
-
-                # Adding bounding box of the real targets
-                image_to_log = add_bounding_boxes(image_to_log, targets[i]['labels'].cpu(),
-                                                  targets[i]['boxes'].cpu(),
-                                                  color_box=(0, 0, 0),
-                                                  thresh=0.001
-                                                  )
-
-                all_images.append(image_to_log)
-
-            self.model.train()
-
-            log = "classifications_images_train_set" if train else "classifications_images_validation_set"
-            wandb.log({log: [wandb.Image(image) for image in all_images]})
-
-    def _train_one_epoch(self, optimizer, data_loader, device, verbose=True):
+    def _train_one_epoch(self, optimizer, data_loader, device, add_classification_weight, verbose=True):
         self.model.train()
         avg_train_loss = 0
         avg_train_classifier = 0
@@ -203,14 +146,9 @@ class FishDetectionModel:
         avg_train_box_reg = 0
 
         for i, (images, targets, _) in enumerate(tqdm(data_loader, position=0, leave=True) if verbose else data_loader):
-            images = list(image.to(device) for image in images)
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-
-            torch.cuda.empty_cache()
-            loss_dict = self.model(images, targets)
-
-            losses = sum(loss for loss in loss_dict.values())
-            avg_train_loss += losses.cpu().item()
+            avg_train_loss, images, loss_dict, losses, targets = self.predict_images_and_calculate_loss(avg_train_loss,
+                                                                                                        device, images,
+                                                                                                        targets, add_classification_weight)
 
             with torch.no_grad():
                 avg_train_classifier += loss_dict['loss_classifier'].cpu().item()
@@ -252,14 +190,10 @@ class FishDetectionModel:
                 print('\nStarting validation')
 
             for images, targets, _ in tqdm(val_set, position=0, leave=True) if verbose else val_set:
-                images = list(image.to(device) for image in images)
-                targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-
-                torch.cuda.empty_cache()
-                loss_dict = self.model(images, targets)
-
-                losses = sum(loss for loss in loss_dict.values())
-                avg_val_loss += losses.cpu().item()
+                avg_train_loss, images, loss_dict, losses, targets = self.predict_images_and_calculate_loss(
+                    avg_val_loss,
+                    device, images,
+                    targets)
 
                 avg_val_classifier += loss_dict['loss_classifier'].cpu().item()
                 avg_val_objectness += loss_dict['loss_objectness'].cpu().item()
@@ -363,3 +297,101 @@ class FishDetectionModel:
             print("Average miss classification all over the images: {}".format(false_positive_classification / len(data_loader_test)))
             print("Average miss detection all over the images: {}".format(miss_detections_rate / len(data_loader_test)))
             print("mAP score over all test images:{}".format(metric.compute()))
+
+    def predict_images_and_calculate_loss(self, avg_train_loss, device, images, targets,
+                                          add_classification_weight=False):
+        """
+        Predicting the images and calculate the loss for the model
+        :param add_classification_weight: If true, gives more weight to the classifier loss.
+        :param avg_train_loss: The current average train loss until now
+        :param device: The deice to work on
+        :param images: The images to predict
+        :param targets: The true labels
+        """
+
+        images = list(image.to(device) for image in images)
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        torch.cuda.empty_cache()
+        loss_dict = self.model(images, targets)
+
+        if add_classification_weight:
+            loss_dict['loss_classifier'] *= 1.01
+
+        losses = sum(loss for loss in loss_dict.values())
+        avg_train_loss += losses.cpu().item()
+
+        return avg_train_loss, images, loss_dict, losses, targets
+
+    def build_model(self, num_classes=2, pretrained=True):
+        """
+        Building a new pretrained model of faster rcnn
+        :param pretrained: Define if the model is pretrained
+        :param num_classes: The number of classes to predict
+        :return: faster-rcnn model
+        """
+
+        if self.args.dropout is not None:
+            print("Using generated MLP box head")
+            box_head = MLPHead(dropout=self.args.dropout)
+        else:
+            print("Using default box head")
+            box_head = None
+
+        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained, box_head=box_head,
+                                                                     min_size=MIN_SIZE, max_size=MAX_SIZE)
+        in_features = model.roi_heads.box_predictor.cls_score.in_features
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+
+        return model
+
+    def log_to_wb(self, images, targets, train=False):
+        """
+        Logging predicted images and IOU to weights and biases
+        :param train: If the log is connected to the train
+        :param images: The images themselves
+        :param targets: The real results of the images
+        :return: batch IOU sum and number of boxes if log_iou is true else None
+        """
+        with torch.no_grad():
+            self.model.eval()  # using evaluation mode in order to get the classifications
+            results = self.model(images)
+            parsed_results = []
+            all_images = []
+
+            for i, img in enumerate(images):
+                parsed_results.append(
+                    {
+                        'labels': results[i]['labels'].cpu(),
+                        'boxes': results[i]['boxes'].cpu(),
+                        'scores': results[i]['scores'].cpu()
+                    }
+                )
+
+                parsed_results[i] = apply_mns(parsed_results[i], iou_thresh=NMS_THRESHOLD)
+                parsed_results[i] = apply_mns(parsed_results[i], applyAll=True, iou_thresh=0.8)
+
+                # Adding bounding boxes of the prediction
+                image_to_log = img.cpu().numpy().transpose(1, 2, 0)
+                image_to_log = cv2.cvtColor(image_to_log, cv2.COLOR_BGR2RGB)
+
+                image_to_log = add_bounding_boxes(image_to_log, parsed_results[i]['labels'],
+                                                  parsed_results[i]['boxes'],
+                                                  pred_score=parsed_results[i]['scores'],
+                                                  color_box=(1, 1, 1),
+                                                  thresh=0.001,
+                                                  return_pil=False
+                                                  )
+
+                # Adding bounding box of the real targets
+                image_to_log = add_bounding_boxes(image_to_log, targets[i]['labels'].cpu(),
+                                                  targets[i]['boxes'].cpu(),
+                                                  color_box=(0, 0, 0),
+                                                  thresh=0.001
+                                                  )
+
+                all_images.append(image_to_log)
+
+            self.model.train()
+
+            log = "classifications_images_train_set" if train else "classifications_images_validation_set"
+            wandb.log({log: [wandb.Image(image) for image in all_images]})
