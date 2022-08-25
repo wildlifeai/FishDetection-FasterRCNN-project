@@ -10,17 +10,20 @@ def main():
         "-lm",
         "--load_model",
         type=str,
-        help="path of the trained model")
+        default='./output/faster-rcnn-model-20220807-204346_no_dropout_single_style (1).model',
+        help="path of the trained model"),
 
     parser.add_argument(
         "-pt",
         "--path_data_csv",
+        default='./data_old/test.csv',
         type=str,
         help="path of the csv of data")
 
     parser.add_argument(
         "-pd",
         "--path_data",
+        default='./data_old',
         type=str,
         help="path of the data")
 

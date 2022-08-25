@@ -65,11 +65,11 @@ class FishDetectionModel:
 
             params = [p for p in self.model.parameters() if p.requires_grad]
 
-            optimizer = torch.optim.Adam(params, lr=config.learning_rate, weight_decay=config.weight_decay,
+            optimizer = torch.optim.Adam(params, lr=self.args.learning_rate, weight_decay=self.args.weight_decay,
                                          betas=(0.09, 0.999))
 
-            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=config.learning_rate_size,
-                                                           gamma=config.gamma)
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.learning_rate_size,
+                                                           gamma=self.args.gamma)
 
             epoch_checkpoint = 0
             if self.args.load_checkpoint:
@@ -81,9 +81,9 @@ class FishDetectionModel:
 
             self.model.to(device)
 
-            for epoch in range(epoch_checkpoint, config.epochs):
+            for epoch in range(epoch_checkpoint, self.args.epochs):
                 should_log = (epoch + 1) % LOG_FREQUENCY == 0
-                print('Epoch {} of {}'.format(epoch + 1, config.epochs))
+                print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
 
                 if epoch + 1 > 80:
                     chosen_data_loader = data_loader
@@ -190,7 +190,7 @@ class FishDetectionModel:
                 print('\nStarting validation')
 
             for images, targets, _ in tqdm(val_set, position=0, leave=True) if verbose else val_set:
-                avg_train_loss, images, loss_dict, losses, targets = self.predict_images_and_calculate_loss(
+                avg_val_loss, images, loss_dict, losses, targets = self.predict_images_and_calculate_loss(
                     avg_val_loss,
                     device, images,
                     targets)
@@ -298,12 +298,12 @@ class FishDetectionModel:
             print("Average miss detection all over the images: {}".format(miss_detections_rate / len(data_loader_test)))
             print("mAP score over all test images:{}".format(metric.compute()))
 
-    def predict_images_and_calculate_loss(self, avg_train_loss, device, images, targets,
+    def predict_images_and_calculate_loss(self, avg_loss, device, images, targets,
                                           add_classification_weight=False):
         """
         Predicting the images and calculate the loss for the model
         :param add_classification_weight: If true, gives more weight to the classifier loss.
-        :param avg_train_loss: The current average train loss until now
+        :param avg_loss: The current average train loss until now
         :param device: The deice to work on
         :param images: The images to predict
         :param targets: The true labels
@@ -318,9 +318,9 @@ class FishDetectionModel:
             loss_dict['loss_classifier'] *= 1.01
 
         losses = sum(loss for loss in loss_dict.values())
-        avg_train_loss += losses.cpu().item()
+        avg_loss += losses.cpu().item()
 
-        return avg_train_loss, images, loss_dict, losses, targets
+        return avg_loss, images, loss_dict, losses, targets
 
     def build_model(self, num_classes=2, pretrained=True):
         """

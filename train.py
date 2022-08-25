@@ -138,6 +138,7 @@ def main():
     )
 
     args = parser.parse_args()
+    print(args)
 
     if not os.path.isdir('./output'):
         os.mkdir("./output")
