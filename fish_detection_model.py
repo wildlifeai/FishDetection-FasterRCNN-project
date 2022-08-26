@@ -19,7 +19,7 @@ LOG_FREQUENCY = 10
 NMS_THRESHOLD = 0.3
 TEST_BATCH_SIZE = 8
 SAVE_MODEL_FREQUENCY = 20
-SHOULD_SAVE_MODEL = 100
+SHOULD_SAVE_MODEL = 121
 VALIDATION_IOU_LOG = False
 MIN_SIZE = 480
 MAX_SIZE = 1920
@@ -45,11 +45,7 @@ class FishDetectionModel:
 
             # Creating data loaders
             dataset_with_style = SpyFishAotearoaDataset(self.args.data_path, "style_train.csv", get_transform(train=True))
-            dataset = SpyFishAotearoaDataset(self.args.data_path, "train.csv", get_transform(train=True))
             dataset_test = SpyFishAotearoaDataset(self.args.data_path, "validation.csv", get_transform(train=False))
-
-            data_loader = torch.utils.data.DataLoader(
-                dataset, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
 
             data_loader_style = torch.utils.data.DataLoader(
                 dataset_with_style, batch_size=self.args.batch_size, shuffle=True, collate_fn=collate_fn)
@@ -65,11 +61,11 @@ class FishDetectionModel:
 
             params = [p for p in self.model.parameters() if p.requires_grad]
 
-            optimizer = torch.optim.Adam(params, lr=self.args.learning_rate, weight_decay=self.args.weight_decay,
+            optimizer = torch.optim.Adam(params, lr=config.learning_rate, weight_decay=config.weight_decay,
                                          betas=(0.09, 0.999))
 
-            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.args.learning_rate_size,
-                                                           gamma=self.args.gamma)
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=config.learning_rate_size,
+                                                           gamma=config.gamma)
 
             epoch_checkpoint = 0
             if self.args.load_checkpoint:
@@ -81,21 +77,12 @@ class FishDetectionModel:
 
             self.model.to(device)
 
-            for epoch in range(epoch_checkpoint, self.args.epochs):
+            for epoch in range(epoch_checkpoint, config.epochs):
                 should_log = (epoch + 1) % LOG_FREQUENCY == 0
                 print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
 
-                if epoch + 1 > 80:
-                    chosen_data_loader = data_loader
-                    switch_classification_weight = True
-                    if epoch + 1 == 81:
-                        print("switching data loader")
-                else:
-                    switch_classification_weight = False
-                    chosen_data_loader = data_loader_style
-
                 avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness, avg_train_box_reg = \
-                    self._train_one_epoch(optimizer, chosen_data_loader, device, switch_classification_weight, verbose)
+                    self._train_one_epoch(optimizer, data_loader_style, device, verbose)
                 lr_scheduler.step()
                 avg_val_loss, avg_val_classifier, avg_val_objectness, avg_val_rpn_box_reg, avg_val_box_reg = \
                     self._evaluate(data_loader_test, should_log, device, verbose)
@@ -137,7 +124,7 @@ class FishDetectionModel:
             torch.save(self.model, self.args.output_path + name)
             self.model = None
 
-    def _train_one_epoch(self, optimizer, data_loader, device, add_classification_weight, verbose=True):
+    def _train_one_epoch(self, optimizer, data_loader, device, add_classification_weight=False, verbose=True):
         self.model.train()
         avg_train_loss = 0
         avg_train_classifier = 0

@@ -12,8 +12,8 @@ GAMMA = 0.1
 LEARNING_RATE_SIZE = 4
 
 # For nesi -r remove when there's a solution
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
+# import ssl
+# ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def main():
@@ -133,7 +133,7 @@ def main():
         "-sw",
         "--sweep",
         type=int,
-        default=1,
+        default=4,
         help="A boolean indicate whether to use sweep or single run"
     )
 
@@ -158,27 +158,29 @@ def main():
             },
             "parameters": {
                 "epochs": {
-                    "values": [1, 2]
+                    'distribution': 'int_uniform',
+                    'min': 80,
+                    'max': 130
                 },
                 "learning_rate": {
                     'distribution': 'uniform',
                     'min': 0,
-                    'max': 0.1
+                    'max': 1e-4
                 },
                 "weight_decay": {
                     'distribution': 'uniform',
                     'min': 0,
-                    'max': 0.1
+                    'max': 1e-4
                 },
                 "learning_rate_size": {
-                    'distribution': 'uniform',
-                    'min': 0,
-                    'max': 0.1
+                    'distribution': 'int_uniform',
+                    'min': 3,
+                    'max': 35
                 },
                 "gamma": {
                     'distribution': 'uniform',
-                    'min': 0,
-                    'max': 0.1
+                    'min': 1e-4,
+                    'max': 0.15
                 },
             }
         }
