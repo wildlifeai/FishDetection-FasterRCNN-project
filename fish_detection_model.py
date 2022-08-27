@@ -79,7 +79,7 @@ class FishDetectionModel:
 
             for epoch in range(epoch_checkpoint, config.epochs):
                 should_log = (epoch + 1) % LOG_FREQUENCY == 0
-                print('Epoch {} of {}'.format(epoch + 1, self.args.epochs))
+                print('Epoch {} of {}'.format(epoch + 1, config.epochs))
 
                 avg_train_loss, avg_train_classifier, avg_train_rpn_box_reg, avg_train_objectness, avg_train_box_reg = \
                     self._train_one_epoch(optimizer, data_loader_style, device, verbose)
