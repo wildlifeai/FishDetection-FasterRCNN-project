@@ -1,5 +1,5 @@
 # wildai-fish-detection-project
-This is a university project for detecting fish for the wildlife.ai organization.
+This is a project for detecting fish for the wildlife.ai organization.
 
 We trained a 'FasterRCNN' on the data wildlife.ai supplied us to detect several species.
 As well, we used methods like augmentations, style transfer to improve our model results.
@@ -8,7 +8,7 @@ We have two dataset, one is smaller which called 'data' and the second dataset i
 
 For the results of the project and more general information you can look on the report -https://docs.google.com/document/d/1me7qQJ8Ltosk5hY5faO3QiFOmuirvS71/edit?usp=sharing&ouid=100668548382721803471&rtpof=true&sd=true
 
-General information bout the files in the project:
+General information about the files in the project:
 
 1. In order to train the model you should run the train.py with the required parameters.
 2. To test the model you should run the file test.py
