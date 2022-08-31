@@ -19,7 +19,9 @@ class ContentLoss(nn.Module):
 
 
 class StyleLoss(nn.Module):
-
+    """
+    A class represent the style loss
+    """
     def __init__(self, target_feature):
         super(StyleLoss, self).__init__()
         self.target = gram_matrix(target_feature).detach()
@@ -30,9 +32,11 @@ class StyleLoss(nn.Module):
         return input
 
 
-# create a module to normalize input image so we can easily put it in a
-# nn.Sequential
 class Normalization(nn.Module):
+    """
+    create a module to normalize input image so we can easily put it in a
+    nn.Sequential
+    """
     def __init__(self, mean, std):
         super(Normalization, self).__init__()
         # .view the mean and std to make them [C x 1 x 1] so that they can
@@ -46,12 +50,17 @@ class Normalization(nn.Module):
         return (img - self.mean) / self.std
 
 
-def gram_matrix(input):
-    a, b, c, d = input.size()  # a=batch size(=1)
+def gram_matrix(mat):
+    """
+    Args:
+        mat: The matrix to calculate on
+    Returns: Calculation of the gram matrix
+    """
+    a, b, c, d = mat.size()  # a=batch size(=1)
     # b=number of feature maps
     # (c,d)=dimensions of a f. map (N=c*d)
 
-    features = input.view(a * b, c * d)  # resise F_XL into \hat F_XL
+    features = mat.view(a * b, c * d)  # resise F_XL into \hat F_XL
 
     G = torch.mm(features, features.t())  # compute the gram product
 

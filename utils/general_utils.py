@@ -1,5 +1,3 @@
-
-
 from utils import transformers as T
 import torchvision.transforms as F
 import torch
@@ -17,8 +15,8 @@ def collate_fn(batch):
 def apply_mns(results, applyAll=False, iou_thresh=0.3):
     """
     Returns the tensors after applying mns on the boxes and classifications.
-    :param applyAll:
-    :param iou_thresh:
+    :param applyAll: boolean indicate whether to apply all
+    :param iou_thresh: The iou threshold for the nms
     :param results: results\targets object
     """
     results_scores = results['scores']

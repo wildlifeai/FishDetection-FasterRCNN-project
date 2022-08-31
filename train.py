@@ -11,10 +11,6 @@ WEIGHT_DECAY = 0
 GAMMA = 0.1
 LEARNING_RATE_SIZE = 4
 
-# For nesi -r remove when there's a solution
-# import ssl
-# ssl._create_default_https_context = ssl._create_unverified_context
-
 
 def main():
     parser = argparse.ArgumentParser()

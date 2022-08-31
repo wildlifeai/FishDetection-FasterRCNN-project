@@ -124,6 +124,8 @@ class FishDetectionModel:
             torch.save(self.model, self.args.output_path + name)
             self.model = None
 
+            torch.cuda.empty_cache()
+
     def _train_one_epoch(self, optimizer, data_loader, device, add_classification_weight=False, verbose=True):
         self.model.train()
         avg_train_loss = 0

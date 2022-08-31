@@ -1,6 +1,3 @@
-"""
-Function to generate and read EDA data on the data given to us
-"""
 import json
 import numpy as np
 import pandas as pd
@@ -25,20 +22,27 @@ def dict_keys_to_np(keys):
 
 def draw_bar_plot(x1, y1, title, x2=None, y2=None, x3=None, y3=None):
     """
-    Presents a bar plot
-    :param x2: optional
-    :param y2: optional
+    Presents and draw a bar plot
+    :param x1: first keys of the bar
+    :param x2: second keys of the bar
+    :param x3: third optional
+    :param y1: value of the first bar
+    :param y2: value of the second bar
+    :param y3: value of the third bar
     :param title: Graph title
     """
     plt.title(title)
     plt.bar(dict_keys_to_np(x1), y1, width=COL_WIDTH, color=TRAIN_COL, label="train set")
+
     if x2:
         plt.bar(dict_keys_to_np(x2) + 1*COL_WIDTH, y2, width=COL_WIDTH, color=TEST_COL, label="test set")
         plt.legend()
+
     if x3:
         plt.bar(dict_keys_to_np(x3) + 2 * COL_WIDTH, y3, width=COL_WIDTH, color=VAL_COL, label="validation "
                                                                                                "set")
         plt.legend()
+
     plt.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
     plt.show()
 
@@ -56,15 +60,6 @@ def count_types(x, count_dict):
     return x
 
 
-def get_areas(h_list, w_list) -> list:  # todo: We need to fix, after the transformation of the labels
-    """
-    Gets a list of heights and widths of squares and returns a list of their areas
-    """
-    h_list = json.loads(h_list)
-    w_list = json.loads(w_list)
-    return [h * w for h, w in zip(h_list, w_list)]
-
-
 def null_or_dict_val(dic, key):
     """
     :param dic: dictionary or null
@@ -79,7 +74,6 @@ def null_or_dict_val(dic, key):
 def change_count_to_relative_dict(count_dict):
     """
     Changes count values to fraction values in a dictionary
-    :param total: Total values in dict
     :param count_dict: Dictionary where the values are counters
     """
     total = sum(count_dict.values(), 0.0)
@@ -136,7 +130,6 @@ def present_eda(eda_data_train, eda_data_test=None, eda_data_val=None):
     if eda_data_test:
         with open(eda_data_val, 'r') as f:
             data_val = json.load(f)
-
 
     # Present graphs
     # # Number of objects in an image

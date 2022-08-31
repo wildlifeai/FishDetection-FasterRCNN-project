@@ -1,16 +1,12 @@
 import os
 import argparse
-
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from PIL import Image
-
 import torchvision.models as models
 import torchvision.transforms as T
-
 from general_utils import get_transform_style
 from style_transfer_lib import Normalization, ContentLoss, StyleLoss
 
@@ -25,6 +21,9 @@ STYLE_LAYERS_DEFAULT = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
 
 
 def transfer_single_dataset(data_path, style_path, output_images_path, style_name):
+    """
+    A function that transfer a single dataset with specified style
+    """
     loader = get_transform_style(IM_SIZE)
     unloader = T.ToPILImage()  # reconvert into PIL image
 
@@ -54,6 +53,9 @@ def transfer_single_dataset(data_path, style_path, output_images_path, style_nam
 
 
 def transfer_datasets(data_path, style_images_path, input_csv, output_images_path, output_csv_path):
+    """
+    Transfer several dataset into the style specified
+    """
     for style_image in os.listdir(style_images_path):
         transfer_single_dataset(os.path.join(data_path, "images"), os.path.join(style_images_path, style_image),
                                 output_images_path, style_image.rsplit(".")[0])
@@ -77,63 +79,12 @@ def transfer_datasets(data_path, style_images_path, input_csv, output_images_pat
 
     style_table.to_csv(output_csv_path, sep=",")
 
-
-def main():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "-p",
-        "--data_path",
-        type=str,
-        default="./data_0808",
-        help="The path of the data directory")
-
-    parser.add_argument(
-        "-s",
-        "--style_images_path",
-        type=str,
-        help="The path of the style images",
-        default="./data/style_images"
-    )
-
-    parser.add_argument(
-        "-ic",
-        "--input_csv",
-        type=str,
-        help="Path to csv file",
-        default="./data_0808/output/train.csv"
-    )
-
-    parser.add_argument(
-        "-oi",
-        "--output_images_path",
-        type=str,
-        help="Save the generated images to",
-        default="./data_0808/images/style_images"
-    )
-
-    parser.add_argument(
-        "-oc",
-        "--output_csv_path",
-        type=str,
-        help="The output path of the '.csv' files",
-        default="./data_0808/output/style_train.csv"
-    )
-
-    args = parser.parse_args()
-
-    # generating the default output folder if not exists
-    if not os.path.isdir(args.output_images_path):
-        os.mkdir(args.output_images_path)
-
-    transfer_datasets(args.data_path, args.style_images_path, args.input_csv, args.output_images_path,
-                      args.output_csv_path)
-
-
-def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
-                               style_img, content_img,
-                               content_layers=None,
+def get_style_model_and_losses(cnn, normalization_mean, normalization_std, style_img, content_img, content_layers=None,
                                style_layers=None):
+    """
+    Function creating the model and two kinds of losses- style and content
+    Returns:
+    """
     # normalization module
     if style_layers is None:
         style_layers = STYLE_LAYERS_DEFAULT
@@ -198,8 +149,12 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
 def run_style_transfer(cnn, normalization_mean, normalization_std,
                        content_img, style_img, input_img, num_steps=250,
                        style_weight=10000, content_weight=20):
-    """Run the style transfer."""
-    print('Building the style transfer model..')
+    """
+    Run the style transfer
+    Returns: The image with style
+
+    """
+    print('Building the style transfer model')
     model, style_losses, content_losses = get_style_model_and_losses(cnn,
                                                                      normalization_mean, normalization_std,
                                                                      style_img, content_img)
@@ -249,12 +204,20 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
 
 
 def get_input_optimizer(input_img):
+    """
+    A function to create the optimizer of the specifed image
+    Returns: the optimizer image
+    """
     # this line to show that input is a parameter that requires a gradient
     optimizer = optim.LBFGS([input_img])
     return optimizer
 
 
 def image_loader(image_name, loader):
+    """
+    Function to load the specified image
+    Returns: The tensor image connected to the device
+    """
     image = Image.open(image_name)
     # fake batch dimension required to fit network's input dimensions
     image = loader(image).unsqueeze(0)
@@ -262,8 +225,11 @@ def image_loader(image_name, loader):
 
 
 def create_content(content_path, loader):
-    # loader = get_transform_style(IM_SIZE)
+    """
+    Function to create the content images and a list of their names
+    Returns: A list of the images and a list for the name of the images
 
+    """
     content_images = []
     content_img_names = os.listdir(content_path)
     for img_path in content_img_names:
@@ -273,10 +239,66 @@ def create_content(content_path, loader):
 
 
 def load_style_images(style_img_path, loader):
+    """
+    Loads the style image
+    Returns: The style image loaded
+
+    """
     style_img = image_loader(style_img_path, loader)
     style_img = style_img[:, :3, :, :]  # check why
     return style_img
 
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-p",
+        "--data_path",
+        type=str,
+        default="./data_0808",
+        help="The path of the data directory")
+
+    parser.add_argument(
+        "-s",
+        "--style_images_path",
+        type=str,
+        help="The path of the style images",
+        default="./data/style_images"
+    )
+
+    parser.add_argument(
+        "-ic",
+        "--input_csv",
+        type=str,
+        help="Path to csv file",
+        default="./data_0808/output/train.csv"
+    )
+
+    parser.add_argument(
+        "-oi",
+        "--output_images_path",
+        type=str,
+        help="Save the generated images to",
+        default="./data_0808/images/style_images"
+    )
+
+    parser.add_argument(
+        "-oc",
+        "--output_csv_path",
+        type=str,
+        help="The output path of the '.csv' files",
+        default="./data_0808/output/style_train.csv"
+    )
+
+    args = parser.parse_args()
+
+    # generating the default output folder if not exists
+    if not os.path.isdir(args.output_images_path):
+        os.mkdir(args.output_images_path)
+
+    transfer_datasets(args.data_path, args.style_images_path, args.input_csv, args.output_images_path,
+                      args.output_csv_path)
 
 if __name__ == '__main__':
     main()

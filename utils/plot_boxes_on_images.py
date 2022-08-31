@@ -12,12 +12,10 @@ from utils.plot_image_bounding_box import add_bounding_boxes
 
 def print_images(img_path, file_name, should_save, output_path):
     """
-
-    :param img_path:
-    :param file_name:
-    :param should_save:
-    :param output_path:
-    :return:
+    :param img_path: The path of the images
+    :param file_name: File name of the csv file of the data
+    :param should_save: Boolean indicate whether to save or not
+    :param output_path: The output path to save the images
     """
     dataset = SpyFishAotearoaDataset(img_path, file_name, T.Compose([T.ToTensor()]))
 

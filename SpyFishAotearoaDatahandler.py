@@ -9,7 +9,7 @@ DEFAULT_TRAINING_SIZE = 0.8
 DEFAULT_VALIDATION_SIZE = 0.1
 
 
-def extract_image_name(label_file_name) -> str:
+def extract_image_name(label_file_name):
     return label_file_name.split(".")[0] + ".jpg"
 
 
@@ -44,7 +44,7 @@ def write_file(dir_path, files_names, output_name):
     return df
 
 
-def parse_data(dir_path, train_size, validation_size, output_path) -> None:
+def parse_data(dir_path, train_size, validation_size, output_path):
     """
     :param output_path:
     :param validation_size:

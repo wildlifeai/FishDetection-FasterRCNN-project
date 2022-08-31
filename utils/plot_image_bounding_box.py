@@ -16,6 +16,7 @@ def add_bounding_boxes(img, pred_cls, boxes, pred_score=None, thresh=0.35, rect_
     :param text_size: Text size
     :param text_th: thickness of the text
     :param color_box: Box and text color
+    :param return_pil: Boolean indicate whether to return a pil
     :return: Returns the image with boxes and labels as PIL
     """
     # turn classification tensors to numpy
