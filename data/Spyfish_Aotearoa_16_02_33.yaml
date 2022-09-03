@@ -1,4 +1,0 @@
-names: [fish1, fish2, fish3, fish4]
-nc: 1
-train: snapper_data/train.txt
-val: snapper_data/valid.txt
