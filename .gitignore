@@ -11,6 +11,8 @@ venv.bak/
 # Libraries
 .idea/
 ./output/
+./data/
+./data_0808/
 ./data/images_with_labels
 ./data/checkpoints_save
 wandb/
