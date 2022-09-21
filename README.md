@@ -27,14 +27,15 @@ We trained a 'FasterRCNN' using the pipeline below on the data to detect three f
 
 
 
-ADD IMAGE OF THE FLOWCHART OF THE WORKING PIPELINE
+![Flow chart of the pipeline](https://github.com/wildlifeai/FishDetection-FasterRCNN-project/blob/master/pipeline_flowchart.png?raw=true)
 
 
 
 
 ## Requirements
 * [Python 3.7+](https://www.python.org/)
-* GPU specs?
+* GPU with at least 16 GB of memory
+* CUDA - vesion 11.0.2
 * Trainig data (COCO format).
 
 ## How to use
